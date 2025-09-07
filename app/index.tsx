@@ -1,31 +1,16 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text } from 'react-native'
 
-const index = () => {
+const Index = () => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome to OpenSound!</Text>
-      <Text style={styles.subtitle}>Enjoy exploring music and sounds.</Text>
+    <View className="flex-1 items-center justify-center bg-neutral-900">
+      <Text className="text-2xl font-bold text-white mb-3">
+        Welcome to OpenSound!
+      </Text>
+      <Text className="text-lg text-neutral-400">
+        Enjoy exploring music and sounds.
+      </Text>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#222',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#bbb',
-  },
-})
-
-export default index
+export default Index

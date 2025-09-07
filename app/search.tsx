@@ -2,8 +2,9 @@ import { View, Text } from "react-native";
 
 export default function Search() {
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Pantalla de Buscar</Text>
+    <View className="flex-1 items-center justify-center bg-neutral-900">
+      <Text className="text-white text-lg">Pantalla de Buscar</Text>
     </View>
   );
 }
+
