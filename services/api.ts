@@ -4,7 +4,6 @@ const CLIENT_ID = "c8500442";
 export async function apiFetch(endpoint: string, params: Record<string, any> = {}) {
   const url = new URL(JAMENDO_API_URL + endpoint);
 
-  // siempre incluimos client_id
   params.client_id = CLIENT_ID;
 
   Object.entries(params).forEach(([key, value]) => {

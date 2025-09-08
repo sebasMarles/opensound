@@ -1,8 +1,16 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { useMusicPlayer } from "../context/MusicPlayerContext";
 
 export default function SongCard({ song }: { song: any }) {
+  const { setCurrentSong, setIsPlaying } = useMusicPlayer();
+
+  const handlePress = () => {
+    setCurrentSong(song);
+    setIsPlaying(true);
+  };
+
   return (
-    <TouchableOpacity style={styles.container}>
+    <TouchableOpacity style={styles.container} onPress={handlePress}>
       <Image
         source={{ uri: song.image || "https://via.placeholder.com/150" }}
         style={styles.image}
