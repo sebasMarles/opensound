@@ -6,6 +6,7 @@
   "include": [
     "app",
     "App.tsx",
-    "nativewind.d.ts"
+    "nativewind.d.ts",
+    "src"
   ]
 }

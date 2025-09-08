@@ -1,8 +1,8 @@
 import { Tabs, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import MiniReproductor from "../components/MiniReproductor";
 import { MusicPlayerProvider } from "../context/MusicPlayerContext";
 import { View, StyleSheet } from "react-native";
+import MiniReproductor from "../components/MiniReproductor";
 
 export default function Layout() {
   const pathname = usePathname();
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 70, // 👈 justo encima del tab bar
+    bottom: 70,
     zIndex: 10,
   },
 });
