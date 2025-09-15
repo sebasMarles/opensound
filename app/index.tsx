@@ -8,7 +8,7 @@ export default function HomeScreen() {
     <View className="flex-1 bg-black">
       <ScrollView
         className="flex-1 px-4 pt-16"
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
       >
         {/* Logo y acciones */}
         <View className="flex-row justify-between items-center mb-6">

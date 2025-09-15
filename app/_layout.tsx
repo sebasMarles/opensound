@@ -49,19 +49,10 @@ export default function Layout() {
               ),
             }}
           />
-          <Tabs.Screen
-            name="login"
-            options={{
-              title: "Iniciar Sesión",
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="person-circle" size={size} color={color} />
-              ),
-            }}
-          />
         </Tabs>
 
         {/* Mini reproductor flotante */}
-        {pathname !== "/login" && (
+        {pathname !== "/auth/login" && pathname !== "/auth/register" && (
           <View style={styles.miniPlayerWrapper}>
             <MiniReproductor />
           </View>
@@ -76,7 +67,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 70, // 👈 justo encima del tab bar
+    bottom: 70,
     zIndex: 10,
   },
 });

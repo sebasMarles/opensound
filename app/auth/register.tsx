@@ -1,28 +1,52 @@
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 
-type FormData = {
+type RegisterData = {
+  name: string;
   email: string;
   password: string;
+  confirmPassword: string;
 };
 
-export default function Login() {
+export default function Register() {
   const {
     control,
     handleSubmit,
+    watch,
     formState: { errors },
-  } = useForm<FormData>();
+  } = useForm<RegisterData>();
 
-  const onSubmit = (data: FormData) => {
-    console.log("Datos enviados:", data);
+  const onSubmit = (data: RegisterData) => {
+    console.log("Registro enviado:", data);
   };
+
+  const password = watch("password");
 
   return (
     <View className="flex-1 justify-center px-6 bg-neutral-900">
       {/* Logo / título */}
       <Text className="text-center text-3xl font-bold text-purple-500 mb-8">
-        OpenSound
+        OpenSound - Registro
       </Text>
+
+      {/* Nombre */}
+      <Controller
+        control={control}
+        name="name"
+        rules={{ required: "El nombre es obligatorio" }}
+        render={({ field: { onChange, value } }) => (
+          <TextInput
+            className="bg-neutral-800 text-white px-4 py-3 rounded-lg mb-2"
+            placeholder="Nombre completo"
+            placeholderTextColor="#888"
+            value={value}
+            onChangeText={onChange}
+          />
+        )}
+      />
+      {errors.name && (
+        <Text className="text-red-500 mb-2">{errors.name.message}</Text>
+      )}
 
       {/* Correo */}
       <Controller
@@ -76,27 +100,39 @@ export default function Login() {
         <Text className="text-red-500 mb-2">{errors.password.message}</Text>
       )}
 
-      {/* Botón Iniciar Sesión */}
+      {/* Confirmar contraseña */}
+      <Controller
+        control={control}
+        name="confirmPassword"
+        rules={{
+          required: "Confirma tu contraseña",
+          validate: (value) =>
+            value === password || "Las contraseñas no coinciden",
+        }}
+        render={({ field: { onChange, value } }) => (
+          <TextInput
+            className="bg-neutral-800 text-white px-4 py-3 rounded-lg mb-2"
+            placeholder="Confirmar contraseña"
+            placeholderTextColor="#888"
+            secureTextEntry
+            value={value}
+            onChangeText={onChange}
+          />
+        )}
+      />
+      {errors.confirmPassword && (
+        <Text className="text-red-500 mb-2">
+          {errors.confirmPassword.message}
+        </Text>
+      )}
+
+      {/* Botón Registrarse */}
       <TouchableOpacity
         className="bg-purple-600 py-3 rounded-lg mt-4"
         onPress={handleSubmit(onSubmit)}
       >
-        <Text className="text-center text-white font-bold">
-          Iniciar Sesión
-        </Text>
+        <Text className="text-center text-white font-bold">Registrarse</Text>
       </TouchableOpacity>
-
-      {/* Botón Registrarse */}
-      <TouchableOpacity className="border border-purple-600 py-3 rounded-lg mt-2">
-        <Text className="text-center text-purple-400 font-bold">
-          Registrarse
-        </Text>
-      </TouchableOpacity>
-
-      {/* Recuperar contraseña */}
-      <Text className="text-center text-gray-400 mt-4">
-        Olvidé mi contraseña
-      </Text>
     </View>
   );
 }
