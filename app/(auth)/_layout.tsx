@@ -6,9 +6,6 @@ const AuthLayout = () => {
     screenOptions={{
             headerShown: false,
     }}/>
-      
-    
-    
   )
 }
 

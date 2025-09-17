@@ -1,5 +1,6 @@
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useForm, Controller } from "react-hook-form";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 type FormData = {
@@ -20,6 +21,14 @@ export default function Login() {
 
   return (
     <View className="flex-1 justify-center px-6 bg-neutral-900">
+      {/* Botón volver al Home */}
+      <TouchableOpacity
+        className="absolute top-10 left-4 z-10"
+        onPress={() => router.push("/")}
+      >
+        <Ionicons name="arrow-back" size={28} color="white" />
+      </TouchableOpacity>
+
       {/* Logo / título */}
       <Text className="text-center text-3xl font-bold text-purple-500 mb-8">
         OpenSound
@@ -48,7 +57,7 @@ export default function Login() {
         )}
       />
       {errors.email && (
-        <Text className="text-red-500 mb-2">{errors.email.message}fghj</Text>
+        <Text className="text-red-500 mb-2">{errors.email.message}</Text>
       )}
 
       {/* Contraseña */}
@@ -82,15 +91,13 @@ export default function Login() {
         className="bg-purple-600 py-3 rounded-lg mt-4"
         onPress={handleSubmit(onSubmit)}
       >
-        <Text className="text-center text-white font-bold">
-          Iniciar Sesión
-        </Text>
+        <Text className="text-center text-white font-bold">Iniciar Sesión</Text>
       </TouchableOpacity>
 
       {/* Botón Registrarse */}
       <TouchableOpacity
         className="border border-purple-600 py-3 rounded-lg mt-2"
-        onPress={() => router.push("/auth/register")}
+        onPress={() => router.push("/register")}
       >
         <Text className="text-center text-purple-400 font-bold">
           Registrarse

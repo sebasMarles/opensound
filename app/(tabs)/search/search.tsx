@@ -1,31 +1,55 @@
 import { useState } from "react";
 import { View, Text, TextInput, ScrollView, Image, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
 
 export default function BuscarScreen() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const router = useRouter();
 
   return (
     <View className="flex-1 bg-black">
       <ScrollView
-        className="flex-1 px-4 pt-16"
-        contentContainerStyle={{ paddingBottom: 120 }}
+        style={{ flex: 1, paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingTop: 8, paddingBottom: 90 }}
       >
-        {/* Logo + Nombre */}
-        <View className="flex-row items-center mb-6">
-          <Image
-            source={require("../assets/logo.png")}
-            className="w-8 h-8 mr-2"
-            resizeMode="contain"
-          />
-          <Text className="text-white text-xl font-bold">OpenSound</Text>
+        {/* Encabezado superior */}
+        <View className="flex-row justify-between items-center mb-6">
+          {/* Logo + Nombre */}
+          <View className="flex-row items-center">
+            <Image
+              source={require("../../../assets/logo.png")}
+              className="w-8 h-8 mr-2"
+              resizeMode="contain"
+            />
+            <Text className="text-white text-xl font-bold">OpenSound</Text>
+          </View>
+
+          {/* Iconos de búsqueda y usuario */}
+          <View className="flex-row space-x-4">
+            <TouchableOpacity onPress={() => router.push("/(tabs)/search/search")}>
+              <Image
+                source={require("../../../assets/lupa.png")}
+                className="w-8 h-8"
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+              <Image
+                source={require("../../../assets/usuario.png")}
+                className="w-8 h-8"
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Barra de búsqueda */}
         <TextInput
           placeholder="Buscar..."
           placeholderTextColor="#aaa"
-          className="bg-purple-700 text-white px-4 py-3 rounded-xl mb-6"
+          className="bg-gray-800 text-white px-4 py-3 rounded-xl mb-6 border border-purple-600"
         />
+
 
         {/* Búsquedas recientes */}
         <Text className="text-white text-lg font-bold mb-4">
@@ -35,7 +59,7 @@ export default function BuscarScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          className="mb-6"
+          className="mb-8"
         >
           {[1, 2, 3, 4].map((i) => (
             <Image

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "opensound",
-    "slug": "opensound",
+    "slug": "opensound-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,13 +21,21 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.sebastianmarles.opensoundapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5e0ca68f-bb43-407b-a709-0afe0a0fe4e8"
+      }
+    },
+    "owner": "sebastianmarles"
   }
 }

@@ -1,10 +1,10 @@
 import { Tabs, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import MiniReproductor from "../components/MiniReproductor";
-import { MusicPlayerProvider } from "../context/MusicPlayerContext";
 import { View, StyleSheet } from "react-native";
+import MiniReproductor from "../../components/MiniReproductor";
+import { MusicPlayerProvider } from "../../context/MusicPlayerContext";
 
-export default function Layout() {
+export default function TabsLayout() {
   const pathname = usePathname();
 
   return (
@@ -51,7 +51,6 @@ export default function Layout() {
           />
         </Tabs>
 
-        {/* Mini reproductor flotante */}
         {pathname !== "/auth/login" && pathname !== "/auth/register" && (
           <View style={styles.miniPlayerWrapper}>
             <MiniReproductor />

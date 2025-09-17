@@ -1,5 +1,7 @@
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useForm, Controller } from "react-hook-form";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 
 type RegisterData = {
   name: string;
@@ -24,6 +26,14 @@ export default function Register() {
 
   return (
     <View className="flex-1 justify-center px-6 bg-neutral-900">
+      {/* Botón volver al Login */}
+      <TouchableOpacity
+        className="absolute top-10 left-4 z-10"
+        onPress={() => router.push("/login")}
+      >
+        <Ionicons name="arrow-back" size={28} color="white" />
+      </TouchableOpacity>
+
       {/* Logo / título */}
       <Text className="text-center text-3xl font-bold text-purple-500 mb-8">
         OpenSound - Registro
