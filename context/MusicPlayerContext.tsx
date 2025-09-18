@@ -1,4 +1,3 @@
-// context/MusicPlayerContext.tsx
 import React, {
   createContext,
   useContext,
@@ -13,7 +12,7 @@ export type CurrentSong = {
   title: string;
   artist: string;
   image: string;
-  audio?: string; // URL reproducible (Jamendo 'audio')
+  audio?: string;
 };
 
 interface MusicPlayerContextType {
@@ -24,19 +23,25 @@ interface MusicPlayerContextType {
   positionMillis: number;
   durationMillis: number;
 
-  // Control "compat" con la UI existente
+  // Modal de detalles
+  isPlayerVisible: boolean;
+  setPlayerVisible: (v: boolean) => void;
+
+  // Compat con UI actual
   setCurrentSong: React.Dispatch<React.SetStateAction<CurrentSong | null>>;
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
 
   // Controles del reproductor
   togglePlayPause: () => Promise<void>;
   next: () => Promise<void>;
+  previous: () => Promise<void>;
+  seekTo: (ms: number) => Promise<void>;
 
   // Cola y reproducción por índice
   setQueueFromJamendo: (tracks: Track[]) => void;
   playTrackByIndex: (index: number) => Promise<void>;
 
-  // Reproducir directamente un track de Jamendo (atajo útil)
+  // Reproducir directamente un track de Jamendo
   playFromJamendoTrack: (t: Track) => Promise<void>;
 }
 
@@ -44,14 +49,10 @@ const MusicPlayerContext = createContext<MusicPlayerContextType | undefined>(
   undefined
 );
 
-export const MusicPlayerProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
+export const MusicPlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const soundRef = useRef<Audio.Sound | null>(null);
 
-  // Cola y posición actual en la cola
+  // Cola
   const [queue, setQueue] = useState<CurrentSong[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
 
@@ -61,9 +62,12 @@ export const MusicPlayerProvider = ({
   const [positionMillis, setPositionMillis] = useState(0);
   const [durationMillis, setDurationMillis] = useState(0);
 
+  // Modal (detalles)
+  const [isPlayerVisible, setPlayerVisible] = useState(false);
+
   const progress = durationMillis > 0 ? positionMillis / durationMillis : 0;
 
-  // Config audio (una vez)
+  // Config audio
   useEffect(() => {
     (async () => {
       await Audio.setAudioModeAsync({
@@ -75,7 +79,7 @@ export const MusicPlayerProvider = ({
     })();
   }, []);
 
-  // Limpieza al desmontar
+  // Limpieza
   useEffect(() => {
     return () => {
       if (soundRef.current) {
@@ -85,7 +89,6 @@ export const MusicPlayerProvider = ({
     };
   }, []);
 
-  // Se llama cada ~500ms (configurable) por expo-av
   const onStatusUpdate = (status: any) => {
     if (!status?.isLoaded) return;
     const s = status as AVPlaybackStatusSuccess;
@@ -94,7 +97,6 @@ export const MusicPlayerProvider = ({
     setDurationMillis(s.durationMillis ?? 0);
 
     if (s.didJustFinish) {
-      // En cuanto termina, ir a siguiente
       next().catch(() => {});
     }
   };
@@ -108,25 +110,22 @@ export const MusicPlayerProvider = ({
     }
   };
 
-  // Carga y reproduce una canción (reemplaza la actual)
   const loadAndPlay = async (song: CurrentSong) => {
     await unloadCurrent();
 
     if (!song.audio) {
-      // Si no hay audio, no se puede reproducir
       _setIsPlayingState(false);
       return;
     }
 
     const { sound } = await Audio.Sound.createAsync(
       { uri: song.audio },
-      { shouldPlay: true, progressUpdateIntervalMillis: 500 },
+      { shouldPlay: true, progressUpdateIntervalMillis: 400 },
       onStatusUpdate
     );
     soundRef.current = sound;
   };
 
-  // Controla reproducción/pausa a partir de un boolean
   const applyPlayback = async (shouldPlay: boolean) => {
     const sound = soundRef.current;
     if (!sound) return;
@@ -140,37 +139,28 @@ export const MusicPlayerProvider = ({
     }
   };
 
-  // Exponer setIsPlaying que además controla el Audio.Sound
-  const setIsPlaying: React.Dispatch<React.SetStateAction<boolean>> = (
-    next
-  ) => {
+  const setIsPlaying: React.Dispatch<React.SetStateAction<boolean>> = (next) => {
     _setIsPlayingState((prev) => {
       const desired = typeof next === "function" ? (next as any)(prev) : next;
-      // Disparar efecto sobre el objeto de audio
       applyPlayback(desired).catch(() => {});
       return desired;
     });
   };
 
-  // setCurrentSong "compat": solo cambia la info visible; NO inicia reproducción
-  // Para reproducir, usa playFromJamendoTrack() o playTrackByIndex()
   const setCurrentSong: React.Dispatch<React.SetStateAction<CurrentSong | null>> =
     (value) => {
       _setCurrentSong(value);
     };
 
-  // API pública del contexto
-
-  // 1) Construir cola desde Jamendo
+  // Cola
   const setQueueFromJamendo = (tracks: Track[]) => {
     const mapped: CurrentSong[] = (tracks || [])
       .map((t) => ({
         title: t.name ?? "Sin título",
         artist: t.artist_name ?? "Artista desconocido",
         image: t.album_image || t.image || "https://picsum.photos/200",
-        audio: t.audio, // puede ser undefined
+        audio: t.audio,
       }))
-      // Para reproducción, nos quedamos con las que tienen audio
       .filter((t) => !!t.audio);
 
     setQueue(mapped);
@@ -181,7 +171,6 @@ export const MusicPlayerProvider = ({
     }
   };
 
-  // 2) Reproducir por índice de cola
   const playTrackByIndex = async (index: number) => {
     if (index < 0 || index >= queue.length) return;
     const song = queue[index];
@@ -190,7 +179,6 @@ export const MusicPlayerProvider = ({
     await loadAndPlay(song);
   };
 
-  // 3) Reproducir directamente desde un Track de Jamendo (atajo)
   const playFromJamendoTrack = async (t: Track) => {
     const song: CurrentSong = {
       title: t.name ?? "Sin título",
@@ -198,7 +186,6 @@ export const MusicPlayerProvider = ({
       image: t.album_image || t.image || "https://picsum.photos/200",
       audio: t.audio,
     };
-    // Si la canción existe en la cola, actualiza índice; si no, la reproducimos fuera de cola
     const idx = queue.findIndex((q) => q.audio === song.audio);
     if (idx >= 0) {
       await playTrackByIndex(idx);
@@ -209,7 +196,6 @@ export const MusicPlayerProvider = ({
     }
   };
 
-  // 4) Toggle play/pause
   const togglePlayPause = async () => {
     const sound = soundRef.current;
     if (!sound) return;
@@ -222,12 +208,38 @@ export const MusicPlayerProvider = ({
     }
   };
 
-  // 5) Siguiente canción (cíclico si hay cola)
   const next = async () => {
     if (queue.length === 0) return;
-    const nextIndex =
-      currentIndex + 1 < queue.length ? currentIndex + 1 : 0;
+    const nextIndex = currentIndex + 1 < queue.length ? currentIndex + 1 : 0;
     await playTrackByIndex(nextIndex);
+  };
+
+  const previous = async () => {
+    const sound = soundRef.current;
+    if (!sound) return;
+    const status = (await sound.getStatusAsync()) as AVPlaybackStatusSuccess;
+    if (!status.isLoaded) return;
+
+    // Si ya pasó de 3s, volver al inicio; si no, ir a la anterior
+    if ((status.positionMillis ?? 0) > 3000) {
+      await sound.setPositionAsync(0);
+      setPositionMillis(0);
+      return;
+    }
+
+    if (queue.length === 0) return;
+    const prevIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : queue.length - 1;
+    await playTrackByIndex(prevIndex);
+  };
+
+  const seekTo = async (ms: number) => {
+    const sound = soundRef.current;
+    if (!sound) return;
+    const status = (await sound.getStatusAsync()) as AVPlaybackStatusSuccess;
+    if (!status.isLoaded) return;
+    const target = Math.max(0, Math.min(ms, status.durationMillis ?? ms));
+    await sound.setPositionAsync(target);
+    setPositionMillis(target);
   };
 
   return (
@@ -239,15 +251,19 @@ export const MusicPlayerProvider = ({
         positionMillis,
         durationMillis,
 
+        isPlayerVisible,
+        setPlayerVisible,
+
         setCurrentSong,
         setIsPlaying,
 
         togglePlayPause,
         next,
+        previous,
+        seekTo,
 
         setQueueFromJamendo,
         playTrackByIndex,
-
         playFromJamendoTrack,
       }}
     >
@@ -259,9 +275,7 @@ export const MusicPlayerProvider = ({
 export const useMusicPlayer = () => {
   const ctx = useContext(MusicPlayerContext);
   if (!ctx) {
-    throw new Error(
-      "useMusicPlayer debe usarse dentro de un MusicPlayerProvider"
-    );
+    throw new Error("useMusicPlayer debe usarse dentro de un MusicPlayerProvider");
   }
   return ctx;
 };

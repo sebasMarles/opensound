@@ -5,7 +5,10 @@
   },
   "include": [
     "app",
-    "App.tsx",
-    "nativewind.d.ts"
+    "components",
+    "context",
+    "services",
+    "nativewind.d.ts",
+    "App.tsx"
   ]
 }

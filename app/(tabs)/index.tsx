@@ -123,13 +123,6 @@ export default function HomeScreen() {
             <Text className="text-white text-xl font-bold">OpenSound</Text>
           </View>
           <View className="flex-row space-x-4">
-            <TouchableOpacity>
-              <Image
-                source={require("../../assets/lupa.png")}
-                className="w-8 h-8"
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/login")}>
               <Image
                 source={require("../../assets/usuario.png")}

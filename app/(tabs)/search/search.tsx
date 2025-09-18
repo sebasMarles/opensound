@@ -26,13 +26,6 @@ export default function BuscarScreen() {
 
           {/* Iconos de búsqueda y usuario */}
           <View className="flex-row space-x-4">
-            <TouchableOpacity onPress={() => router.push("/(tabs)/search/search")}>
-              <Image
-                source={require("../../../assets/lupa.png")}
-                className="w-8 h-8"
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
               <Image
                 source={require("../../../assets/usuario.png")}
