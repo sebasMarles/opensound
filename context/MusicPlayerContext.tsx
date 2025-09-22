@@ -62,7 +62,7 @@ export const MusicPlayerProvider = ({ children }: { children: React.ReactNode })
   const [positionMillis, setPositionMillis] = useState(0);
   const [durationMillis, setDurationMillis] = useState(0);
 
-  // Modal (detalles)
+  // Modal de los detalles dela cancion
   const [isPlayerVisible, setPlayerVisible] = useState(false);
 
   const progress = durationMillis > 0 ? positionMillis / durationMillis : 0;

@@ -1,113 +1,193 @@
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
-import { useForm, Controller } from "react-hook-form";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Image,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useForm, Controller } from 'react-hook-form';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '../../stores/authStore';
+import { AuthCredentials } from '../../types/auth';
 
-type FormData = {
-  email: string;
-  password: string;
-};
+export default function LoginScreen() {
+  const router = useRouter();
+  const { login, isLoading, error, clearError } = useAuthStore();
+  const [showPassword, setShowPassword] = useState(false);
 
-export default function Login() {
   const {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>();
+  } = useForm<AuthCredentials>({
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
-  const onSubmit = (data: FormData) => {
-    console.log("Datos enviados:", data);
+  const onSubmit = async (data: AuthCredentials) => {
+    try {
+      clearError();
+      await login(data);
+      router.replace('/(tabs)');
+    } catch (error) {
+      // El error ya se maneja en el store
+      console.error('Login failed:', error);
+    }
   };
 
   return (
-    <View className="flex-1 justify-center px-6 bg-neutral-900">
-      {/* Botón volver al Home */}
-      <TouchableOpacity
-        className="absolute top-10 left-4 z-10"
-        onPress={() => router.push("/")}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        className="flex-1 bg-black"
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
       >
-        <Ionicons name="arrow-back" size={28} color="white" />
-      </TouchableOpacity>
+        <View className="flex-1 px-6 pt-20">
+          {/* Logo y título */}
+          <View className="items-center mb-12">
+            <Image
+              source={require('../../assets/logo.png')}
+              className="w-20 h-20 mb-4"
+              resizeMode="contain"
+            />
+            <Text className="text-white text-3xl font-bold mb-2">OpenSound</Text>
+            <Text className="text-gray-400 text-base text-center">
+              Inicia sesión para descubrir música increíble
+            </Text>
+          </View>
 
-      {/* Logo / título */}
-      <Text className="text-center text-3xl font-bold text-purple-500 mb-8">
-        OpenSound
-      </Text>
+          {/* Formulario */}
+          <View className="space-y-6">
+            {/* Email */}
+            <View>
+              <Text className="text-white text-sm font-medium mb-2">Email</Text>
+              <Controller
+                control={control}
+                name="email"
+                rules={{
+                  required: 'El email es requerido',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'Email inválido',
+                  },
+                }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    className="bg-neutral-900 text-white px-4 py-3 rounded-lg border border-neutral-700 focus:border-purple-600"
+                    placeholder="tu@email.com"
+                    placeholderTextColor="#9CA3AF"
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                )}
+              />
+              {errors.email && (
+                <Text className="text-red-500 text-sm mt-1">{errors.email.message}</Text>
+              )}
+            </View>
 
-      {/* Correo */}
-      <Controller
-        control={control}
-        name="email"
-        rules={{
-          required: "El correo es obligatorio",
-          pattern: {
-            value: /\S+@\S+\.\S+/,
-            message: "Correo inválido",
-          },
-        }}
-        render={({ field: { onChange, value } }) => (
-          <TextInput
-            className="bg-neutral-800 text-white px-4 py-3 rounded-lg mb-2"
-            placeholder="Correo"
-            placeholderTextColor="#888"
-            keyboardType="email-address"
-            value={value}
-            onChangeText={onChange}
-          />
-        )}
-      />
-      {errors.email && (
-        <Text className="text-red-500 mb-2">{errors.email.message}</Text>
-      )}
+            {/* Password */}
+            <View>
+              <Text className="text-white text-sm font-medium mb-2">Contraseña</Text>
+              <View className="relative">
+                <Controller
+                  control={control}
+                  name="password"
+                  rules={{
+                    required: 'La contraseña es requerida',
+                    minLength: {
+                      value: 6,
+                      message: 'La contraseña debe tener al menos 6 caracteres',
+                    },
+                  }}
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      className="bg-neutral-900 text-white px-4 py-3 pr-12 rounded-lg border border-neutral-700 focus:border-purple-600"
+                      placeholder="Tu contraseña"
+                      placeholderTextColor="#9CA3AF"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  )}
+                />
+                <TouchableOpacity
+                  className="absolute right-3 top-3"
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={20}
+                    color="#9CA3AF"
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.password && (
+                <Text className="text-red-500 text-sm mt-1">{errors.password.message}</Text>
+              )}
+            </View>
 
-      {/* Contraseña */}
-      <Controller
-        control={control}
-        name="password"
-        rules={{
-          required: "La contraseña es obligatoria",
-          minLength: {
-            value: 6,
-            message: "Mínimo 6 caracteres",
-          },
-        }}
-        render={({ field: { onChange, value } }) => (
-          <TextInput
-            className="bg-neutral-800 text-white px-4 py-3 rounded-lg mb-2"
-            placeholder="Contraseña"
-            placeholderTextColor="#888"
-            secureTextEntry
-            value={value}
-            onChangeText={onChange}
-          />
-        )}
-      />
-      {errors.password && (
-        <Text className="text-red-500 mb-2">{errors.password.message}</Text>
-      )}
+            {/* Error message */}
+            {error && (
+              <View className="bg-red-900/20 border border-red-500 rounded-lg p-3">
+                <Text className="text-red-400 text-sm text-center">{error}</Text>
+              </View>
+            )}
 
-      {/* Botón Iniciar Sesión */}
-      <TouchableOpacity
-        className="bg-purple-600 py-3 rounded-lg mt-4"
-        onPress={handleSubmit(onSubmit)}
-      >
-        <Text className="text-center text-white font-bold">Iniciar Sesión</Text>
-      </TouchableOpacity>
+            {/* Forgot Password */}
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/forgot-password')}
+              className="self-end"
+            >
+              <Text className="text-purple-400 text-sm">¿Olvidaste tu contraseña?</Text>
+            </TouchableOpacity>
 
-      {/* Botón Registrarse */}
-      <TouchableOpacity
-        className="border border-purple-600 py-3 rounded-lg mt-2"
-        onPress={() => router.push("/register")}
-      >
-        <Text className="text-center text-purple-400 font-bold">
-          Registrarse
-        </Text>
-      </TouchableOpacity>
+            {/* Login Button */}
+            <TouchableOpacity
+              className={`bg-purple-600 py-4 rounded-lg ${isLoading ? 'opacity-50' : ''}`}
+              onPress={handleSubmit(onSubmit)}
+              disabled={isLoading}
+            >
+              <Text className="text-white text-center text-lg font-semibold">
+                {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+              </Text>
+            </TouchableOpacity>
 
-      {/* Recuperar contraseña */}
-      <Text className="text-center text-gray-400 mt-4">
-        Olvidé mi contraseña
-      </Text>
-    </View>
+            {/* Divider */}
+            <View className="flex-row items-center my-6">
+              <View className="flex-1 h-px bg-neutral-700" />
+              <Text className="text-gray-400 px-4">o</Text>
+              <View className="flex-1 h-px bg-neutral-700" />
+            </View>
+
+            {/* Register Link */}
+            <View className="flex-row justify-center items-center">
+              <Text className="text-gray-400">¿No tienes cuenta? </Text>
+              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+                <Text className="text-purple-400 font-semibold">Regístrate</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

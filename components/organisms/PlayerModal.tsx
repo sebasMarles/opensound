@@ -1,14 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  Animated,
-  LayoutChangeEvent,
-  Dimensions,
-  StyleSheet,
-} from "react-native";
+import {View,Text,Image, TouchableOpacity, Animated, LayoutChangeEvent, Dimensions, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMusicPlayer } from "../../context/MusicPlayerContext";
 
@@ -56,10 +47,10 @@ export default function PlayerModal() {
     animateLike();
   };
 
-  // Barra de progreso (seek)
+  // Barra de progreso
   const [barWidth, setBarWidth] = useState(0);
   const [scrubbing, setScrubbing] = useState(false);
-  const [preview, setPreview] = useState<number | null>(null); // 0..1
+  const [preview, setPreview] = useState<number | null>(null); 
 
   const effectiveProgress = useMemo(() => {
     const p = preview ?? progress ?? 0;
@@ -92,7 +83,7 @@ export default function PlayerModal() {
 
   return (
     <View
-      style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.95)", zIndex: 50, elevation: 100 }]}
+      style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0, 0, 0, 1)", zIndex: 50, elevation: 100 }]}
       pointerEvents="auto"
     >
       {/* Header - ancho completo */}

@@ -14,7 +14,7 @@ export async function getRecentSongs(limit: number = 10): Promise<Track[]> {
   const res = await apiFetch<Track>("/tracks", {
     limit,
     order: "popularity_total",
-    audioformat: "mp31", // importante para obtener audio
+    audioformat: "mp31", 
   });
   return res.results ?? [];
 }
@@ -24,7 +24,7 @@ export async function searchSongs(query: string, limit: number = 10): Promise<Tr
   const res = await apiFetch<Track>("/tracks", {
     limit,
     search: query,
-    audioformat: "mp31", // importante para obtener audio
+    audioformat: "mp31",
   });
   return res.results ?? [];
 }

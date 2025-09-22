@@ -1,17 +1,9 @@
-// app/(tabs)/index.tsx
 import { useEffect, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  ActivityIndicator,
-  Animated,
-} from "react-native";
+import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Animated, } from "react-native";
 import { useRouter } from "expo-router";
 import { getRecentSongs, searchSongs } from "../../services/jamendo";
 import { useMusicPlayer } from "../../context/MusicPlayerContext";
+import { useAuthStore } from "../../stores/authStore";
 
 type TagOption = { label: string; query: string };
 
@@ -23,16 +15,17 @@ const TAGS: TagOption[] = [
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const {
     setQueueFromJamendo,
-    playFromJamendoTrack, // reproducir al tocar
+    playFromJamendoTrack,
   } = useMusicPlayer();
 
   const [recent, setRecent] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  // Animación "Cargando contenido"
+  //  Animación "Cargando contenido"
   const pulse = useRef(new Animated.Value(0.3)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -45,16 +38,16 @@ export default function HomeScreen() {
     return () => loop.stop();
   }, [pulse]);
 
-  // Carga inicial SIN dependencias (evita bucles)
+  // Carga inicial 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         setLoading(true);
-        const data = await getRecentSongs(12);
+        const data = await getRecentSongs(15);
         if (!mounted) return;
         setRecent(data || []);
-        setQueueFromJamendo(data || []); // prepara cola para next/prev
+        setQueueFromJamendo(data || []);
       } catch (e) {
         console.log("Error cargando recientes:", e);
       } finally {
@@ -64,8 +57,7 @@ export default function HomeScreen() {
     return () => {
       mounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // <- importante: deps vacías
+  }, []);
 
   const coverOf = (t: any) =>
     t?.album_image || t?.image || "https://picsum.photos/200";
@@ -84,7 +76,7 @@ export default function HomeScreen() {
       setLoading(true);
       const data = await searchSongs(tag.query, 12);
       setRecent(data || []);
-      setQueueFromJamendo(data || []); // actualiza cola según filtro
+      setQueueFromJamendo(data || []); 
     } catch (e) {
       console.log(`Error buscando por tag ${tag.query}:`, e);
     } finally {
@@ -95,7 +87,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-black items-center justify-center">
-        <ActivityIndicator size="large" color="#A855F7" />
+        <ActivityIndicator size="large" color="#D400FF" />
         <Animated.Text
           style={{ opacity: pulse }}
           className="text-white mt-4 text-base"
@@ -120,15 +112,22 @@ export default function HomeScreen() {
               className="w-8 h-8 mr-2"
               resizeMode="contain"
             />
-            <Text className="text-white text-xl font-bold">OpenSound</Text>
+            <View>
+              <Text className="text-white text-xl font-bold">OpenSound</Text>
+              {user && (
+                <Text className="text-gray-400 text-sm">
+                  Hola, {user.name.split(' ')[0]}
+                </Text>
+              )}
+            </View>
           </View>
           <View className="flex-row space-x-4">
-            <TouchableOpacity onPress={() => router.push("/login")}>
-              <Image
-                source={require("../../assets/usuario.png")}
-                className="w-8 h-8"
-                resizeMode="contain"
-              />
+            <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
+              <View className="w-8 h-8 rounded-full bg-purple-600 justify-center items-center">
+                <Text className="text-white text-xs font-bold">
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -154,7 +153,7 @@ export default function HomeScreen() {
 
         {/* Carrusel */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6">
-          {recent.slice(0, 12).map((track: any) => {
+          {recent.slice(0, 15).map((track: any) => {
             const source = { uri: coverOf(track) };
             const title = track?.name ?? "Sin título";
             return (

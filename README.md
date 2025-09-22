@@ -25,7 +25,14 @@ iOS: San Francisco (el nombre interno que usa el sistema para su fuente estánda
 
 Android: Roboto.
 
+## Esquema de colores
 
+| Color          | Hex       | Uso principal                                        |
+| -------------- | --------- | ---------------------------------------------------- |
+| **Negro**      | `#000000` | Fondo principal de la app                            |
+| **Morado**     | `#D400FF` | Elementos destacados (botones, barra de búsqueda)    |
+| **Blanco**     | `#FFFFFF` | Texto y elementos principales                        |
+| **Gris claro** | `#AAAAAA` | Texto de marcador de posición y detalles secundarios |
 ---
 
 ## Dependencias necesarias para correr el proyecto

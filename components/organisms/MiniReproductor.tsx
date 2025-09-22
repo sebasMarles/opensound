@@ -1,4 +1,3 @@
-// components/organisms/MiniReproductor.tsx
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { useMusicPlayer } from "../../context/MusicPlayerContext";
 
@@ -8,8 +7,8 @@ export default function MiniReproductor() {
     currentSong,
     togglePlayPause,
     next,
-    progress, // 0..1
-    setPlayerVisible, // para abrir el modal
+    progress,
+    setPlayerVisible, 
   } = useMusicPlayer();
 
   if (!currentSong) return null;
@@ -17,7 +16,7 @@ export default function MiniReproductor() {
   const clampedProgress = Math.max(0, Math.min(1, progress));
 
   return (
-    <View className="bg-neutral-900 border-t border-purple-600 px-4 py-3">
+    <View className="bg-neutral-900 border-t px-4 py-3">
       {/* Barra de progreso arriba */}
       <View className="absolute left-0 right-0 top-0 h-[2px] bg-neutral-800" />
       <View
