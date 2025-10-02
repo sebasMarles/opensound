@@ -6,8 +6,8 @@ export interface Playlist {
   description?: string;
   tracks: Track[];
   userId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   isPublic: boolean;
   coverImage?: string;
 }
@@ -16,6 +16,8 @@ export interface CreatePlaylistDto {
   name: string;
   description?: string;
   isPublic?: boolean;
+  coverImage?: string;
+  userId?: string;
 }
 
 export interface UpdatePlaylistDto {

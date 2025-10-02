@@ -3,7 +3,8 @@ export interface User {
   email: string;
   name: string;
   avatar?: string;
-  createdAt: Date;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AuthCredentials {

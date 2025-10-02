@@ -31,15 +31,15 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   createPlaylist: async (playlistData: CreatePlaylistDto) => {
     try {
       set({ isLoading: true, error: null });
-      
+
       const newPlaylist = await PlaylistService.create(playlistData);
-      
+
       set(state => ({
-        playlists: [...state.playlists, newPlaylist],
+        playlists: [...state.playlists.filter(playlist => playlist.id !== newPlaylist.id), newPlaylist],
         isLoading: false,
         error: null,
       }));
-      
+
       return newPlaylist;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error al crear playlist';
@@ -54,9 +54,9 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   fetchPlaylists: async (userId: string) => {
     try {
       set({ isLoading: true, error: null });
-      
+
       const playlists = await PlaylistService.getAll(userId);
-      
+
       set({
         playlists,
         isLoading: false,
@@ -74,14 +74,17 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   fetchPlaylistById: async (id: string) => {
     try {
       set({ isLoading: true, error: null });
-      
+
       const playlist = await PlaylistService.getById(id);
-      
-      set({
+
+      set(state => ({
         currentPlaylist: playlist,
+        playlists: state.playlists.some(item => item.id === id)
+          ? state.playlists.map(item => (item.id === id ? playlist : item))
+          : [...state.playlists, playlist],
         isLoading: false,
         error: null,
-      });
+      }));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error al cargar playlist';
       set({
@@ -94,17 +97,24 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   updatePlaylist: async (id: string, updateData: UpdatePlaylistDto) => {
     try {
       set({ isLoading: true, error: null });
-      
+
       const updatedPlaylist = await PlaylistService.update(id, updateData);
-      
-      set(state => ({
-        playlists: state.playlists.map(playlist =>
-          playlist.id === id ? updatedPlaylist : playlist
-        ),
-        currentPlaylist: state.currentPlaylist?.id === id ? updatedPlaylist : state.currentPlaylist,
-        isLoading: false,
-        error: null,
-      }));
+
+      set(state => {
+        const exists = state.playlists.some(playlist => playlist.id === id);
+        const playlists = exists
+          ? state.playlists.map(playlist =>
+              playlist.id === id ? updatedPlaylist : playlist
+            )
+          : [...state.playlists, updatedPlaylist];
+
+        return {
+          playlists,
+          currentPlaylist: state.currentPlaylist?.id === id ? updatedPlaylist : state.currentPlaylist,
+          isLoading: false,
+          error: null,
+        };
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error al actualizar playlist';
       set({
@@ -140,28 +150,25 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   addTrackToPlaylist: async (playlistId: string, track: Track) => {
     try {
       set({ error: null });
-      
-      await PlaylistService.addTrack(playlistId, track);
-      
-      set(state => ({
-        playlists: state.playlists.map(playlist =>
-          playlist.id === playlistId
-            ? {
-                ...playlist,
-                tracks: [...playlist.tracks, track],
-                updatedAt: new Date(),
-              }
-            : playlist
-        ),
-        currentPlaylist: state.currentPlaylist?.id === playlistId
-          ? {
-              ...state.currentPlaylist,
-              tracks: [...state.currentPlaylist.tracks, track],
-              updatedAt: new Date(),
-            }
-          : state.currentPlaylist,
-        error: null,
-      }));
+
+      const updatedPlaylist = await PlaylistService.addTrack(playlistId, track);
+
+      set(state => {
+        const exists = state.playlists.some(playlist => playlist.id === playlistId);
+        const playlists = exists
+          ? state.playlists.map(playlist =>
+              playlist.id === playlistId ? updatedPlaylist : playlist
+            )
+          : [...state.playlists, updatedPlaylist];
+
+        return {
+          playlists,
+          currentPlaylist: state.currentPlaylist?.id === playlistId
+            ? updatedPlaylist
+            : state.currentPlaylist,
+          error: null,
+        };
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error al agregar canción';
       set({ error: errorMessage });
@@ -172,28 +179,25 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   removeTrackFromPlaylist: async (playlistId: string, trackId: string) => {
     try {
       set({ error: null });
-      
-      await PlaylistService.removeTrack(playlistId, trackId);
-      
-      set(state => ({
-        playlists: state.playlists.map(playlist =>
-          playlist.id === playlistId
-            ? {
-                ...playlist,
-                tracks: playlist.tracks.filter(track => track.id !== trackId),
-                updatedAt: new Date(),
-              }
-            : playlist
-        ),
-        currentPlaylist: state.currentPlaylist?.id === playlistId
-          ? {
-              ...state.currentPlaylist,
-              tracks: state.currentPlaylist.tracks.filter(track => track.id !== trackId),
-              updatedAt: new Date(),
-            }
-          : state.currentPlaylist,
-        error: null,
-      }));
+
+      const updatedPlaylist = await PlaylistService.removeTrack(playlistId, trackId);
+
+      set(state => {
+        const exists = state.playlists.some(playlist => playlist.id === playlistId);
+        const playlists = exists
+          ? state.playlists.map(playlist =>
+              playlist.id === playlistId ? updatedPlaylist : playlist
+            )
+          : [...state.playlists, updatedPlaylist];
+
+        return {
+          playlists,
+          currentPlaylist: state.currentPlaylist?.id === playlistId
+            ? updatedPlaylist
+            : state.currentPlaylist,
+          error: null,
+        };
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error al remover canción';
       set({ error: errorMessage });
@@ -204,28 +208,21 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   reorderPlaylistTracks: async (playlistId: string, trackIds: string[]) => {
     try {
       set({ error: null });
-      
-      await PlaylistService.reorderTracks(playlistId, trackIds);
-      
+
+      const updatedPlaylist = await PlaylistService.reorderTracks(playlistId, trackIds);
+
       set(state => {
-        const updateTracks = (playlist: Playlist) => {
-          const reorderedTracks = trackIds.map(id =>
-            playlist.tracks.find(track => track.id === id)
-          ).filter(Boolean) as Track[];
-          
-          return {
-            ...playlist,
-            tracks: reorderedTracks,
-            updatedAt: new Date(),
-          };
-        };
+        const exists = state.playlists.some(playlist => playlist.id === playlistId);
+        const playlists = exists
+          ? state.playlists.map(playlist =>
+              playlist.id === playlistId ? updatedPlaylist : playlist
+            )
+          : [...state.playlists, updatedPlaylist];
 
         return {
-          playlists: state.playlists.map(playlist =>
-            playlist.id === playlistId ? updateTracks(playlist) : playlist
-          ),
+          playlists,
           currentPlaylist: state.currentPlaylist?.id === playlistId
-            ? updateTracks(state.currentPlaylist)
+            ? updatedPlaylist
             : state.currentPlaylist,
           error: null,
         };
