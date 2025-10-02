@@ -2,302 +2,150 @@ import axios from 'axios';
 import { Playlist, CreatePlaylistDto, UpdatePlaylistDto } from '../types/playlist';
 import { Track } from './jamendo';
 import { StorageService } from './storage';
+import { authApi } from './auth';
+import { getApiBaseUrl } from '../config/env';
 
-// Configuración base de la API
-const API_BASE_URL = 'https://api.opensound.com'; // Cambiar por tu API real
+const API_BASE_URL = getApiBaseUrl();
 
-const playlistApi = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+type PlaylistApiResponse = Omit<Playlist, 'tracks'> & { tracks?: Track[] };
+
+const normalizePlaylist = (playlist: PlaylistApiResponse): Playlist => ({
+  ...playlist,
+  tracks: playlist.tracks ?? [],
 });
 
-// Interceptor para agregar token automáticamente
-playlistApi.interceptors.request.use(
-  async (config) => {
-    const token = await StorageService.getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+const extractErrorMessage = (error: unknown, fallback: string): string => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { message?: string | string[] } | undefined;
+    if (data?.message) {
+      if (Array.isArray(data.message)) {
+        return data.message.join(', ');
+      }
+      return data.message;
     }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
   }
-);
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+};
 
 export class PlaylistService {
-  // Crear nueva playlist
   static async create(playlistData: CreatePlaylistDto): Promise<Playlist> {
     try {
-      console.log('🎵 Simulando creación de playlist:', playlistData.name);
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const mockPlaylist: Playlist = {
-        id: Date.now().toString(),
+      const storedUser = await StorageService.getUserData();
+      const payload = {
         name: playlistData.name,
         description: playlistData.description,
-        tracks: [],
-        userId: '1', // Obtener del contexto de auth
-        createdAt: new Date(),
-        updatedAt: new Date(),
         isPublic: playlistData.isPublic ?? false,
-        coverImage: undefined,
+        coverImage: playlistData.coverImage,
+        ...(playlistData.userId ? { userId: playlistData.userId } : storedUser?.id ? { userId: storedUser.id } : {}),
       };
 
-      // Guardar en storage local para persistencia
-      await this.savePlaylistToLocal(mockPlaylist);
-
-      console.log('✅ Playlist creada exitosamente');
-      return mockPlaylist;
+      const { data } = await authApi.post<PlaylistApiResponse>('/playlists', payload);
+      return normalizePlaylist(data);
     } catch (error) {
-      console.error('Create playlist error:', error);
-      throw new Error('Error al crear playlist');
+      const message = extractErrorMessage(error, 'Error al crear playlist');
+      throw new Error(message);
     }
   }
 
-  // Obtener todas las playlists del usuario
-  static async getAll(userId: string): Promise<Playlist[]> {
+  static async getAll(userId?: string): Promise<Playlist[]> {
     try {
-      console.log('📋 Simulando obtención de playlists para usuario:', userId);
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Obtener de storage local
-      const localPlaylists = await this.getPlaylistsFromLocal();
-      console.log(`✅ ${localPlaylists.length} playlists obtenidas`);
-      return localPlaylists;
+      const params = userId ? { userId } : undefined;
+      const { data } = await authApi.get<PlaylistApiResponse[]>('/playlists', { params });
+      return data.map(normalizePlaylist);
     } catch (error) {
       console.error('Get playlists error:', error);
-      // Si falla, retornar array vacío
       return [];
     }
   }
 
-  // Obtener playlist por ID
   static async getById(id: string): Promise<Playlist> {
     try {
-      console.log('🔍 Simulando búsqueda de playlist:', id);
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Buscar en storage local
-      const localPlaylists = await this.getPlaylistsFromLocal();
-      const playlist = localPlaylists.find(p => p.id === id);
-      
-      if (!playlist) {
-        throw new Error('Playlist no encontrada');
-      }
-      
-      console.log('✅ Playlist encontrada:', playlist.name);
-      return playlist;
+      const { data } = await authApi.get<PlaylistApiResponse>(`/playlists/${id}`);
+      return normalizePlaylist(data);
     } catch (error) {
-      console.error('Get playlist by ID error:', error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Error al obtener playlist');
+      const message = extractErrorMessage(error, 'Error al obtener playlist');
+      throw new Error(message);
     }
   }
 
-  // Actualizar playlist
   static async update(id: string, updateData: UpdatePlaylistDto): Promise<Playlist> {
     try {
-      console.log('✏️ Simulando actualización de playlist:', id);
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
-      // Actualizar en storage local
-      const localPlaylists = await this.getPlaylistsFromLocal();
-      const playlistIndex = localPlaylists.findIndex(p => p.id === id);
-      
-      if (playlistIndex === -1) {
-        throw new Error('Playlist no encontrada');
-      }
-      
-      const updatedPlaylist = {
-        ...localPlaylists[playlistIndex],
-        ...updateData,
-        updatedAt: new Date(),
-      };
-      
-      localPlaylists[playlistIndex] = updatedPlaylist;
-      await this.savePlaylistsToLocal(localPlaylists);
-      
-      console.log('✅ Playlist actualizada exitosamente');
-      return updatedPlaylist;
+      const { data } = await authApi.put<PlaylistApiResponse>(`/playlists/${id}`, updateData);
+      return normalizePlaylist(data);
     } catch (error) {
-      console.error('Update playlist error:', error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Error al actualizar playlist');
+      const message = extractErrorMessage(error, 'Error al actualizar playlist');
+      throw new Error(message);
     }
   }
 
-  // Eliminar playlist
   static async delete(id: string): Promise<void> {
     try {
-      console.log('🗑️ Simulando eliminación de playlist:', id);
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 400));
-      
-      // Eliminar de storage local
-      const localPlaylists = await this.getPlaylistsFromLocal();
-      const filteredPlaylists = localPlaylists.filter(p => p.id !== id);
-      await this.savePlaylistsToLocal(filteredPlaylists);
-      
-      console.log('✅ Playlist eliminada exitosamente');
+      await authApi.delete(`/playlists/${id}`);
     } catch (error) {
-      console.error('Delete playlist error:', error);
-      throw new Error('Error al eliminar playlist');
+      const message = extractErrorMessage(error, 'Error al eliminar playlist');
+      throw new Error(message);
     }
   }
 
-  // Agregar track a playlist
-  static async addTrack(playlistId: string, track: Track): Promise<void> {
+  static async addTrack(playlistId: string, track: Track): Promise<Playlist> {
     try {
-      console.log('➕ Simulando agregar canción a playlist:', track.name);
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Actualizar storage local
-      const localPlaylists = await this.getPlaylistsFromLocal();
-      const playlistIndex = localPlaylists.findIndex(p => p.id === playlistId);
-      
-      if (playlistIndex !== -1) {
-        // Verificar que el track no esté ya en la playlist
-        const existingTrack = localPlaylists[playlistIndex].tracks.find(t => t.id === track.id);
-        if (!existingTrack) {
-          localPlaylists[playlistIndex].tracks.push(track);
-          localPlaylists[playlistIndex].updatedAt = new Date();
-          await this.savePlaylistsToLocal(localPlaylists);
-          console.log('✅ Canción agregada exitosamente');
-        } else {
-          console.log('⚠️ La canción ya está en la playlist');
-        }
-      }
+      const { data } = await authApi.post<PlaylistApiResponse>(`/playlists/${playlistId}/tracks`, { track });
+      return normalizePlaylist(data);
     } catch (error) {
-      console.error('Add track to playlist error:', error);
-      throw new Error('Error al agregar canción a playlist');
+      const message = extractErrorMessage(error, 'Error al agregar canción a la playlist');
+      throw new Error(message);
     }
   }
 
-  // Remover track de playlist
-  static async removeTrack(playlistId: string, trackId: string): Promise<void> {
+  static async removeTrack(playlistId: string, trackId: string): Promise<Playlist> {
     try {
-      console.log('➖ Simulando remover canción de playlist:', trackId);
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Actualizar storage local
-      const localPlaylists = await this.getPlaylistsFromLocal();
-      const playlistIndex = localPlaylists.findIndex(p => p.id === playlistId);
-      
-      if (playlistIndex !== -1) {
-        localPlaylists[playlistIndex].tracks = localPlaylists[playlistIndex].tracks.filter(
-          t => t.id !== trackId
-        );
-        localPlaylists[playlistIndex].updatedAt = new Date();
-        await this.savePlaylistsToLocal(localPlaylists);
-        console.log('✅ Canción removida exitosamente');
-      }
+      const { data } = await authApi.delete<PlaylistApiResponse>(`/playlists/${playlistId}/tracks/${trackId}`);
+      return normalizePlaylist(data);
     } catch (error) {
-      console.error('Remove track from playlist error:', error);
-      throw new Error('Error al remover canción de playlist');
+      const message = extractErrorMessage(error, 'Error al remover canción de la playlist');
+      throw new Error(message);
     }
   }
 
-  // Reordenar tracks en playlist
-  static async reorderTracks(playlistId: string, trackIds: string[]): Promise<void> {
+  static async reorderTracks(playlistId: string, trackIds: string[]): Promise<Playlist> {
     try {
-      await playlistApi.put(`/playlists/${playlistId}/reorder`, { trackIds });
-      
-      // Actualizar storage local
-      const localPlaylists = await this.getPlaylistsFromLocal();
-      const playlistIndex = localPlaylists.findIndex(p => p.id === playlistId);
-      
-      if (playlistIndex !== -1) {
-        const playlist = localPlaylists[playlistIndex];
-        const reorderedTracks = trackIds.map(id => 
-          playlist.tracks.find(track => track.id === id)
-        ).filter(Boolean) as Track[];
-        
-        localPlaylists[playlistIndex].tracks = reorderedTracks;
-        localPlaylists[playlistIndex].updatedAt = new Date();
-        await this.savePlaylistsToLocal(localPlaylists);
-      }
+      const { data } = await authApi.put<PlaylistApiResponse>(`/playlists/${playlistId}/reorder`, { trackIds });
+      return normalizePlaylist(data);
     } catch (error) {
-      console.error('Reorder tracks error:', error);
-      throw new Error('Error al reordenar canciones');
+      const message = extractErrorMessage(error, 'Error al reordenar canciones');
+      throw new Error(message);
     }
   }
 
-  // Obtener playlists públicas
   static async getPublicPlaylists(limit: number = 20, offset: number = 0): Promise<Playlist[]> {
     try {
-      const response = await playlistApi.get(`/playlists/public?limit=${limit}&offset=${offset}`);
-      
-      // Simulación - retornar playlists mock
-      return [];
+      const { data } = await axios.get<PlaylistApiResponse[]>(`${API_BASE_URL}/playlists/public`, {
+        params: { limit, offset },
+      });
+      return data.map(normalizePlaylist);
     } catch (error) {
       console.error('Get public playlists error:', error);
       return [];
     }
   }
 
-  // Buscar playlists
   static async search(query: string, limit: number = 20): Promise<Playlist[]> {
-    try {
-      const response = await playlistApi.get(`/playlists/search?q=${encodeURIComponent(query)}&limit=${limit}`);
-      
-      // Simulación - buscar en storage local
-      const localPlaylists = await this.getPlaylistsFromLocal();
-      return localPlaylists.filter(playlist => 
-        playlist.name.toLowerCase().includes(query.toLowerCase()) ||
-        (playlist.description && playlist.description.toLowerCase().includes(query.toLowerCase()))
-      );
-    } catch (error) {
-      console.error('Search playlists error:', error);
+    if (!query) {
       return [];
     }
-  }
 
-  // Métodos privados para storage local
-  private static async savePlaylistToLocal(playlist: Playlist): Promise<void> {
     try {
-      const existingPlaylists = await this.getPlaylistsFromLocal();
-      const updatedPlaylists = [...existingPlaylists, playlist];
-      await StorageService.setPreferences({ playlists: updatedPlaylists });
+      const { data } = await axios.get<PlaylistApiResponse[]>(`${API_BASE_URL}/playlists/search`, {
+        params: { q: query, limit },
+      });
+      return data.map(normalizePlaylist);
     } catch (error) {
-      console.error('Save playlist to local error:', error);
-    }
-  }
-
-  private static async savePlaylistsToLocal(playlists: Playlist[]): Promise<void> {
-    try {
-      await StorageService.setPreferences({ playlists });
-    } catch (error) {
-      console.error('Save playlists to local error:', error);
-    }
-  }
-
-  private static async getPlaylistsFromLocal(): Promise<Playlist[]> {
-    try {
-      const preferences = await StorageService.getPreferences();
-      return preferences?.playlists || [];
-    } catch (error) {
-      console.error('Get playlists from local error:', error);
+      console.error('Search playlists error:', error);
       return [];
     }
   }

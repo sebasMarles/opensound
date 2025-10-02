@@ -1,9 +1,9 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { AuthCredentials, RegisterCredentials, AuthResponse, User } from '../types/auth';
 import { StorageService } from './storage';
+import { getApiBaseUrl } from '../config/env';
 
-// Configuración base de la API (cambiar por tu endpoint real)
-const API_BASE_URL = 'https://api.opensound.com'; // Cambiar por tu API real
+const API_BASE_URL = getApiBaseUrl();
 
 const authApi = axios.create({
   baseURL: API_BASE_URL,
@@ -13,102 +13,131 @@ const authApi = axios.create({
   },
 });
 
-// Interceptor para agregar token automáticamente
-authApi.interceptors.request.use(
-  async (config) => {
-    const token = await StorageService.getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+interface RetriableRequestConfig extends AxiosRequestConfig {
+  _retry?: boolean;
+}
 
-// Interceptor para manejar refresh token automáticamente
+type FailedRequestQueueItem = {
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+};
+
+let isRefreshing = false;
+let failedQueue: FailedRequestQueueItem[] = [];
+
+const processQueue = (error: unknown, token: string | null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else if (token) {
+      resolve(token);
+    } else {
+      reject(new Error('Token de acceso no disponible tras renovar la sesión.'));
+    }
+  });
+
+  failedQueue = [];
+};
+
+const extractErrorMessage = (error: unknown, fallback: string): string => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { message?: string | string[] } | undefined;
+    if (data?.message) {
+      if (Array.isArray(data.message)) {
+        return data.message.join(', ');
+      }
+      return data.message;
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+authApi.interceptors.request.use(async (config) => {
+  const token = await StorageService.getToken();
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 authApi.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    if (error.response?.status === 401 && !originalRequest._retry) {
+  async (error: AxiosError) => {
+    const status = error.response?.status;
+    const originalRequest = error.config as RetriableRequestConfig;
+
+    if (status === 401 && !originalRequest?._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve: (token: string) => {
+              originalRequest.headers = originalRequest.headers ?? {};
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              resolve(authApi(originalRequest));
+            },
+            reject,
+          });
+        });
+      }
+
       originalRequest._retry = true;
-      
+      isRefreshing = true;
+
       try {
         const refreshToken = await StorageService.getRefreshToken();
-        if (refreshToken) {
-          const response = await AuthService.refreshToken(refreshToken);
-          await StorageService.setToken(response.token);
-          
-          // Reintentar la petición original
-          originalRequest.headers.Authorization = `Bearer ${response.token}`;
-          return authApi(originalRequest);
+        if (!refreshToken) {
+          throw error;
         }
+
+        const refreshed = await AuthService.refreshToken(refreshToken);
+        processQueue(null, refreshed.token);
+
+        originalRequest.headers = originalRequest.headers ?? {};
+        originalRequest.headers.Authorization = `Bearer ${refreshed.token}`;
+        return authApi(originalRequest);
       } catch (refreshError) {
-        // Si el refresh falla, limpiar tokens y redirigir al login
+        processQueue(refreshError, null);
         await StorageService.clearAll();
-        // Aquí podrías emitir un evento para redirigir al login
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
 
 export class AuthService {
-  // Login
-  static async login(credentials: AuthCredentials): Promise<AuthResponse> {
-    try {
-      // Simulación completa sin llamadas HTTP para desarrollo
-      console.log('🔐 Simulando login para:', credentials.email);
-      
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Validaciones básicas
-      if (!credentials.email || !credentials.password) {
-        throw new Error('Email y contraseña son requeridos');
-      }
-
-      // Simulamos una respuesta exitosa
-      const mockResponse: AuthResponse = {
-        token: 'mock_jwt_token_' + Date.now(),
-        refreshToken: 'mock_refresh_token_' + Date.now(),
-        user: {
-          id: '1',
-          email: credentials.email,
-          name: 'Usuario Demo',
-          createdAt: new Date(),
-        },
-        expiresIn: 3600,
-      };
-
-      // Guardar tokens en storage
-      await StorageService.setToken(mockResponse.token);
-      if (mockResponse.refreshToken) {
-        await StorageService.setRefreshToken(mockResponse.refreshToken);
-      }
-      await StorageService.setUserData(mockResponse.user);
-
-      console.log('✅ Login simulado exitoso');
-      return mockResponse;
-    } catch (error) {
-      console.error('Login error:', error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Error al iniciar sesión. Verifica tus credenciales.');
+  private static async persistAuthData(authData: AuthResponse): Promise<void> {
+    await StorageService.setToken(authData.token);
+    if (authData.refreshToken) {
+      await StorageService.setRefreshToken(authData.refreshToken);
+    }
+    if (authData.user) {
+      await StorageService.setUserData(authData.user);
     }
   }
 
-  // Register
+  static async login(credentials: AuthCredentials): Promise<AuthResponse> {
+    try {
+      const { data } = await authApi.post<AuthResponse>('/auth/login', credentials);
+      await this.persistAuthData(data);
+      return data;
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Error al iniciar sesión. Verifica tus credenciales.');
+      throw new Error(message);
+    }
+  }
+
   static async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     try {
-      console.log('📝 Simulando registro para:', credentials.email);
-      
-      // Validaciones básicas
       if (credentials.password !== credentials.confirmPassword) {
         throw new Error('Las contraseñas no coinciden');
       }
@@ -125,82 +154,54 @@ export class AuthService {
         throw new Error('Email inválido');
       }
 
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Simulamos una respuesta exitosa
-      const mockResponse: AuthResponse = {
-        token: 'mock_jwt_token_' + Date.now(),
-        refreshToken: 'mock_refresh_token_' + Date.now(),
-        user: {
-          id: Date.now().toString(),
-          email: credentials.email,
-          name: credentials.name,
-          createdAt: new Date(),
-        },
-        expiresIn: 3600,
+      const payload = {
+        name: credentials.name.trim(),
+        email: credentials.email.trim(),
+        password: credentials.password,
       };
 
-      // Guardar tokens en storage
-      await StorageService.setToken(mockResponse.token);
-      if (mockResponse.refreshToken) {
-        await StorageService.setRefreshToken(mockResponse.refreshToken);
-      }
-      await StorageService.setUserData(mockResponse.user);
-
-      console.log('✅ Registro simulado exitoso');
-      return mockResponse;
+      const { data } = await authApi.post<AuthResponse>('/auth/register', payload);
+      await this.persistAuthData(data);
+      return data;
     } catch (error) {
-      console.error('Register error:', error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Error al registrar usuario');
+      const message = extractErrorMessage(error, 'Error al registrar usuario');
+      throw new Error(message);
     }
   }
 
-  // Refresh Token
   static async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
-      console.log('🔄 Simulando refresh token');
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const mockResponse: AuthResponse = {
-        token: 'new_mock_jwt_token_' + Date.now(),
-        refreshToken: 'new_mock_refresh_token_' + Date.now(),
-        user: await StorageService.getUserData(),
-        expiresIn: 3600,
-      };
+      const { data } = await axios.post<AuthResponse>(
+        `${API_BASE_URL}/auth/refresh`,
+        { refreshToken },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-      console.log('✅ Refresh token simulado exitoso');
-      return mockResponse;
+      await this.persistAuthData(data);
+      return data;
     } catch (error) {
-      console.error('Refresh token error:', error);
-      throw new Error('Error al renovar token');
+      const message = extractErrorMessage(error, 'Error al renovar token');
+      throw new Error(message);
     }
   }
 
-  // Logout
   static async logout(): Promise<void> {
     try {
-      console.log('👋 Simulando logout');
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      console.log('✅ Logout simulado exitoso');
+      const refreshToken = await StorageService.getRefreshToken();
+      if (refreshToken) {
+        await authApi.post('/auth/logout', { refreshToken });
+      }
     } catch (error) {
       console.error('Logout API error:', error);
-      // Continuar con el logout local aunque falle el servidor
     } finally {
-      // Limpiar storage local
       await StorageService.clearAll();
     }
   }
 
-  // Verificar si el usuario está autenticado
   static async isAuthenticated(): Promise<boolean> {
     try {
       const token = await StorageService.getToken();
@@ -211,34 +212,28 @@ export class AuthService {
     }
   }
 
-  // Obtener usuario actual
   static async getCurrentUser(): Promise<User | null> {
     try {
-      return await StorageService.getUserData();
+      const { data } = await authApi.get<User>('/auth/me');
+      await StorageService.setUserData(data);
+      return data;
     } catch (error) {
       console.error('Get current user error:', error);
-      return null;
+      return await StorageService.getUserData();
     }
   }
 
-  // Actualizar perfil de usuario
   static async updateProfile(userData: Partial<User>): Promise<User> {
     try {
-      const response = await authApi.put('/auth/profile', userData);
-      
-      // Simulación - reemplazar con respuesta real
-      const currentUser = await StorageService.getUserData();
-      const updatedUser = { ...currentUser, ...userData };
-      
-      await StorageService.setUserData(updatedUser);
-      return updatedUser;
+      const { data } = await authApi.put<User>('/auth/profile', userData);
+      await StorageService.setUserData(data);
+      return data;
     } catch (error) {
-      console.error('Update profile error:', error);
-      throw new Error('Error al actualizar perfil');
+      const message = extractErrorMessage(error, 'Error al actualizar perfil');
+      throw new Error(message);
     }
   }
 
-  // Cambiar contraseña
   static async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     try {
       await authApi.put('/auth/change-password', {
@@ -246,31 +241,19 @@ export class AuthService {
         newPassword,
       });
     } catch (error) {
-      console.error('Change password error:', error);
-      throw new Error('Error al cambiar contraseña');
+      const message = extractErrorMessage(error, 'Error al cambiar contraseña');
+      throw new Error(message);
     }
   }
 
-  // Recuperar contraseña
   static async forgotPassword(email: string): Promise<void> {
     try {
-      console.log('📧 Simulando envío de email de recuperación a:', email);
-      
-      // Validar email
-      if (!email || !email.includes('@')) {
-        throw new Error('Email inválido');
-      }
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log('✅ Email de recuperación simulado enviado');
+      await authApi.post('/auth/forgot-password', { email });
     } catch (error) {
-      console.error('Forgot password error:', error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Error al enviar email de recuperación');
+      const message = extractErrorMessage(error, 'Error al enviar email de recuperación');
+      throw new Error(message);
     }
   }
 }
+
+export { authApi };

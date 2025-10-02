@@ -104,5 +104,15 @@ npm install
 -Iniciar el proyecto en Expo:
 npm start
 
+## Configuración del backend
+
+La aplicación móvil consume un backend desplegado en `https://opensound.icu`. Para apuntar a otro entorno crea un archivo `.env` basado en `.env.example` y define la variable:
+
+```
+EXPO_PUBLIC_API_URL=https://tu-api.com
+```
+
+Expo inyecta automáticamente las variables que empiezan con `EXPO_PUBLIC_`, por lo que el cliente usará esa URL tanto en desarrollo como en los builds de producción.
+
 
 
