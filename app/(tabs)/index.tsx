@@ -30,7 +30,6 @@ export default function HomeScreen() {
 
   const [recent, setRecent] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   // Animación "Cargando contenido"
   const pulse = useRef(new Animated.Value(0.3)).current;
@@ -80,7 +79,6 @@ export default function HomeScreen() {
 
   const handleFilter = async (tag: TagOption) => {
     try {
-      setSelectedTag(tag.query);
       setLoading(true);
       const data = await searchSongs(tag.query, 12);
       setRecent(data || []);
@@ -123,7 +121,7 @@ export default function HomeScreen() {
             <Text className="text-white text-xl font-bold">OpenSound</Text>
           </View>
           <View className="flex-row space-x-4">
-            <TouchableOpacity onPress={() => router.push("/login")}>
+            <TouchableOpacity onPress={() => router.push("/(auth)/login")}> 
               <Image
                 source={require("../../assets/usuario.png")}
                 className="w-8 h-8"

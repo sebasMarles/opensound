@@ -26,20 +26,17 @@ export default function Register() {
 
   return (
     <View className="flex-1 justify-center px-6 bg-neutral-900">
-      {/* Botón volver al Login */}
       <TouchableOpacity
         className="absolute top-10 left-4 z-10"
-        onPress={() => router.push("/login")}
+        onPress={() => router.push("/(auth)/login")}
       >
         <Ionicons name="arrow-back" size={28} color="white" />
       </TouchableOpacity>
 
-      {/* Logo / título */}
       <Text className="text-center text-3xl font-bold text-purple-500 mb-8">
         OpenSound - Registro
       </Text>
 
-      {/* Nombre */}
       <Controller
         control={control}
         name="name"
@@ -58,14 +55,13 @@ export default function Register() {
         <Text className="text-red-500 mb-2">{errors.name.message}</Text>
       )}
 
-      {/* Correo */}
       <Controller
         control={control}
         name="email"
         rules={{
           required: "El correo es obligatorio",
           pattern: {
-            value: /\S+@\S+\.\S+/,
+            value: /\S+@\S+\.\S+/, 
             message: "Correo inválido",
           },
         }}
@@ -75,6 +71,7 @@ export default function Register() {
             placeholder="Correo"
             placeholderTextColor="#888"
             keyboardType="email-address"
+            autoCapitalize="none"
             value={value}
             onChangeText={onChange}
           />
@@ -84,7 +81,6 @@ export default function Register() {
         <Text className="text-red-500 mb-2">{errors.email.message}</Text>
       )}
 
-      {/* Contraseña */}
       <Controller
         control={control}
         name="password"
@@ -101,6 +97,7 @@ export default function Register() {
             placeholder="Contraseña"
             placeholderTextColor="#888"
             secureTextEntry
+            autoCapitalize="none"
             value={value}
             onChangeText={onChange}
           />
@@ -110,7 +107,6 @@ export default function Register() {
         <Text className="text-red-500 mb-2">{errors.password.message}</Text>
       )}
 
-      {/* Confirmar contraseña */}
       <Controller
         control={control}
         name="confirmPassword"
@@ -125,6 +121,7 @@ export default function Register() {
             placeholder="Confirmar contraseña"
             placeholderTextColor="#888"
             secureTextEntry
+            autoCapitalize="none"
             value={value}
             onChangeText={onChange}
           />
@@ -136,7 +133,6 @@ export default function Register() {
         </Text>
       )}
 
-      {/* Botón Registrarse */}
       <TouchableOpacity
         className="bg-purple-600 py-3 rounded-lg mt-4"
         onPress={handleSubmit(onSubmit)}

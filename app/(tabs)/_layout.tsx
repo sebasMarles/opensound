@@ -3,7 +3,7 @@ import { Tabs, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, StyleSheet } from "react-native";
 import MiniReproductor from "../../components/MiniReproductor";
-import PlayerModal from "../../components/PlayerModal"; // <- agregado
+import PlayerModal from "../../components/PlayerModal";
 import { MusicPlayerProvider } from "../../context/MusicPlayerContext";
 
 export default function TabsLayout() {
@@ -59,7 +59,6 @@ export default function TabsLayout() {
           </View>
         )}
 
-        {/* Modal de detalles del reproductor (overlay) */}
         <PlayerModal />
       </View>
     </MusicPlayerProvider>

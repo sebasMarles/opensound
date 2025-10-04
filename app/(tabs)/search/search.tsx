@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { View, Text, TextInput, ScrollView, Image, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 
 export default function BuscarScreen() {
-  const [isPlaying, setIsPlaying] = useState(false);
   const router = useRouter();
 
   return (

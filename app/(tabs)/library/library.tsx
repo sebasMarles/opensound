@@ -29,7 +29,7 @@ export default function Library() {
           </View>
 
           <View className="flex-row space-x-4">
-            <TouchableOpacity onPress={() => router.push("/login")}>
+            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
               <Image
                 source={require("../../../assets/usuario.png")}
                 className="w-8 h-8"
