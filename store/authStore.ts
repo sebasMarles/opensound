@@ -6,7 +6,9 @@ type AuthState = {
   tokens: AuthTokens | null;
   isLoading: boolean;
   error: string | null;
-  register: (data: RegisterCredentials) => Promise<void>;
+  register: (
+    data: RegisterCredentials,
+  ) => Promise<{ user: AuthUser; tokens: AuthTokens }>;
   setSession: (payload: { user: AuthUser; tokens: AuthTokens }) => void;
   clearSession: () => void;
   clearError: () => void;
@@ -35,16 +37,26 @@ export const useAuthStore = create<AuthState>((set) => ({
       };
       const fakeTokens: AuthTokens = { token: "fake-token" };
 
-      set({
+      const session = {
         user: fakeUser,
         tokens: fakeTokens,
+      };
+
+      set({
+        ...session,
         isLoading: false,
       });
+
+      return session;
     } catch (err) {
       set({
         error: "Error al registrar usuario",
         isLoading: false,
       });
+      if (err instanceof Error) {
+        throw err;
+      }
+      throw new Error("Error al registrar usuario");
     }
   },
 

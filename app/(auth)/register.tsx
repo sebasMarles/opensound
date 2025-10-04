@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
-import {View,Text,TextInput,TouchableOpacity,KeyboardAvoidingView,Platform,ScrollView,Image,} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from '../../store/authStore';
-import { RegisterCredentials } from '../../types/auth';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Image,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useForm, Controller } from "react-hook-form";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "../../store/authStore";
+import { RegisterCredentials } from "../../types/auth";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -33,7 +42,7 @@ export default function RegisterScreen() {
     try {
       await register(data);
       router.replace('/(tabs)');
-    } catch (e) {
+    } catch {
       // Error ya manejado en el store
     }
   };

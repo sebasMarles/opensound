@@ -9,16 +9,21 @@ const AuthenticatedStack = () => {
   const segments = useSegments();
   const router = useRouter();
   const isAuthGroup = segments[0] === "(auth)";
+  const currentAuthScreen = segments[1];
+  const isAuthScreen =
+    isAuthGroup && (currentAuthScreen === "login" || currentAuthScreen === "register");
 
   useEffect(() => {
     if (loading) return;
 
     if (!token && !isAuthGroup) {
       router.replace("/(auth)/login");
+    } else if (token && isAuthScreen) {
+      router.replace("/profile");
     } else if (token && isAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [isAuthGroup, loading, router, token]);
+  }, [isAuthGroup, isAuthScreen, loading, router, token]);
 
   if (loading) {
     return (
@@ -32,6 +37,7 @@ const AuthenticatedStack = () => {
     <Stack screenOptions={{ headerShown: false }} initialRouteName="(auth)">
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="profile" />
     </Stack>
   );
 };
