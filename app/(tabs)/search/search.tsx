@@ -1,8 +1,10 @@
 import { View, Text, TextInput, ScrollView, Image, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function BuscarScreen() {
   const router = useRouter();
+  const { token } = useAuth();
 
   return (
     <View className="flex-1 bg-black">
@@ -24,7 +26,11 @@ export default function BuscarScreen() {
 
           {/* Iconos de búsqueda y usuario */}
           <View className="flex-row space-x-4">
-            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+            <TouchableOpacity
+              onPress={() =>
+                router.push(token ? "/profile" : "/(auth)/login")
+              }
+            >
               <Image
                 source={require("../../../assets/usuario.png")}
                 className="w-8 h-8"
