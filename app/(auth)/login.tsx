@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 
@@ -39,14 +38,6 @@ export default function Login() {
 
   return (
     <View className="flex-1 justify-center px-6 bg-neutral-900">
-      <TouchableOpacity
-        className="absolute top-10 left-4 z-10"
-        onPress={() => router.back()}
-        accessibilityRole="button"
-        accessibilityLabel="Volver al inicio"
-      >
-        <Ionicons name="arrow-back" size={28} color="white" />
-      </TouchableOpacity>
 
       <Text className="text-center text-3xl font-bold text-purple-500 mb-8">
         OpenSound

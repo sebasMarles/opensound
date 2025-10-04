@@ -2,14 +2,17 @@ import { ActivityIndicator, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "../context/AuthContext";
-import { SafeAreaProvider } from "react-native-safe-area-context"; // ✅ IMPORTANTE
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 const AuthenticatedStack = () => {
   const { token, loading } = useAuth();
-  const segments = useSegments();
   const router = useRouter();
-  const isAuthGroup = segments[0] === "(auth)";
-  const currentAuthScreen = segments[1];
+
+  // 👇 Ensancha el tipo a string[] para evitar el error de tupla
+  const segmentsArr = Array.from(useSegments()); // <- clave
+  const isAuthGroup = segmentsArr[0] === "(auth)";
+  const currentAuthScreen = segmentsArr[1] ?? null;
+
   const isAuthScreen =
     isAuthGroup && (currentAuthScreen === "login" || currentAuthScreen === "register");
 
@@ -44,7 +47,7 @@ const AuthenticatedStack = () => {
 
 const RootLayout = () => {
   return (
-    <SafeAreaProvider>  {/* ✅ AÑADIDO */}
+    <SafeAreaProvider>
       <AuthProvider>
         <AuthenticatedStack />
       </AuthProvider>
