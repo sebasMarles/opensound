@@ -1,11 +1,17 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
 } from "react";
-import { Audio, AVPlaybackStatusSuccess } from "expo-av";
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  type AudioPlayer,
+  type AudioStatus,
+} from "expo-audio";
 import type { Track } from "../services/jamendo";
 
 export type CurrentSong = {
@@ -50,7 +56,9 @@ const MusicPlayerContext = createContext<MusicPlayerContextType | undefined>(
 );
 
 export const MusicPlayerProvider = ({ children }: { children: React.ReactNode }) => {
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const playerRef = useRef<AudioPlayer | null>(null);
+  const statusSubscriptionRef = useRef<{ remove: () => void } | null>(null);
+  const nextRef = useRef<(() => Promise<void>) | null>(null);
 
   // Cola
   const [queue, setQueue] = useState<CurrentSong[]>([]);
@@ -70,79 +78,105 @@ export const MusicPlayerProvider = ({ children }: { children: React.ReactNode })
   // Config audio
   useEffect(() => {
     (async () => {
-      await Audio.setAudioModeAsync({
-        staysActiveInBackground: false,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-      });
+      try {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: false,
+          allowsRecording: false,
+          interruptionMode: "duckOthers",
+          interruptionModeAndroid: "duckOthers",
+          shouldRouteThroughEarpiece: false,
+        });
+      } catch (error) {
+        console.warn("No se pudo configurar el modo de audio", error);
+      }
     })();
   }, []);
 
   // Limpieza
   useEffect(() => {
     return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(() => {});
-        soundRef.current = null;
+      statusSubscriptionRef.current?.remove?.();
+      statusSubscriptionRef.current = null;
+      if (playerRef.current) {
+        try {
+          playerRef.current.remove();
+        } catch (error) {
+          console.warn("No se pudo liberar el reproductor", error);
+        }
+        playerRef.current = null;
       }
     };
   }, []);
 
-  const onStatusUpdate = (status: any) => {
-    if (!status?.isLoaded) return;
-    const s = status as AVPlaybackStatusSuccess;
-    _setIsPlayingState(s.isPlaying);
-    setPositionMillis(s.positionMillis ?? 0);
-    setDurationMillis(s.durationMillis ?? 0);
+  const attachStatusListener = useCallback((player: AudioPlayer) => {
+    statusSubscriptionRef.current?.remove?.();
+    statusSubscriptionRef.current = player.addListener(
+      "playbackStatusUpdate",
+      (status: AudioStatus) => {
+        _setIsPlayingState(Boolean(status.playing));
+        const position = Math.max(0, Math.floor((status.currentTime ?? 0) * 1000));
+        const duration = Math.max(0, Math.floor((status.duration ?? 0) * 1000));
+        setPositionMillis(position);
+        setDurationMillis(duration);
 
-    if (s.didJustFinish) {
-      next().catch(() => {});
-    }
-  };
-
-  const unloadCurrent = async () => {
-    if (soundRef.current) {
-      try {
-        await soundRef.current.unloadAsync();
-      } catch {}
-      soundRef.current = null;
-    }
-  };
-
-  const loadAndPlay = async (song: CurrentSong) => {
-    await unloadCurrent();
-
-    if (!song.audio) {
-      _setIsPlayingState(false);
-      return;
-    }
-
-    const { sound } = await Audio.Sound.createAsync(
-      { uri: song.audio },
-      { shouldPlay: true, progressUpdateIntervalMillis: 400 },
-      onStatusUpdate
+        if (status.didJustFinish && nextRef.current) {
+          nextRef.current().catch(() => {});
+        }
+      }
     );
-    soundRef.current = sound;
-  };
+  }, []);
 
-  const applyPlayback = async (shouldPlay: boolean) => {
-    const sound = soundRef.current;
-    if (!sound) return;
-    const status = (await sound.getStatusAsync()) as AVPlaybackStatusSuccess;
-    if (!status.isLoaded) return;
-
-    if (shouldPlay && !status.isPlaying) {
-      await sound.playAsync();
-    } else if (!shouldPlay && status.isPlaying) {
-      await sound.pauseAsync();
+  const ensurePlayer = useCallback(() => {
+    if (playerRef.current) {
+      return playerRef.current;
     }
-  };
+
+    const player = createAudioPlayer(null, { updateInterval: 400 });
+    attachStatusListener(player);
+    playerRef.current = player;
+    return player;
+  }, [attachStatusListener]);
+
+  const loadAndPlay = useCallback(
+    async (song: CurrentSong) => {
+      const player = ensurePlayer();
+      setPositionMillis(0);
+      setDurationMillis(0);
+
+      if (!song.audio) {
+        _setIsPlayingState(false);
+        player.pause();
+        player.replace(null);
+        return;
+      }
+
+      try {
+        player.replace({ uri: song.audio });
+        player.play();
+      } catch (error) {
+        console.warn("No se pudo reproducir la canción", error);
+        _setIsPlayingState(false);
+      }
+    },
+    [ensurePlayer]
+  );
+
+  const applyPlayback = useCallback((shouldPlay: boolean) => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    if (shouldPlay) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, []);
 
   const setIsPlaying: React.Dispatch<React.SetStateAction<boolean>> = (next) => {
     _setIsPlayingState((prev) => {
       const desired = typeof next === "function" ? (next as any)(prev) : next;
-      applyPlayback(desired).catch(() => {});
+      applyPlayback(desired);
       return desired;
     });
   };
@@ -153,7 +187,7 @@ export const MusicPlayerProvider = ({ children }: { children: React.ReactNode })
     };
 
   // Cola
-  const setQueueFromJamendo = (tracks: Track[]) => {
+  const setQueueFromJamendo = useCallback((tracks: Track[]) => {
     const mapped: CurrentSong[] = (tracks || [])
       .map((t) => ({
         title: t.name ?? "Sin título",
@@ -164,65 +198,68 @@ export const MusicPlayerProvider = ({ children }: { children: React.ReactNode })
       .filter((t) => !!t.audio);
 
     setQueue(mapped);
-    if (mapped.length === 0) {
-      setCurrentIndex(-1);
-    } else if (currentIndex >= mapped.length) {
-      setCurrentIndex(0);
-    }
-  };
+    setCurrentIndex((prev) => {
+      if (mapped.length === 0) return -1;
+      return prev >= mapped.length ? 0 : prev;
+    });
+  }, []);
 
-  const playTrackByIndex = async (index: number) => {
-    if (index < 0 || index >= queue.length) return;
-    const song = queue[index];
-    setCurrentIndex(index);
-    _setCurrentSong(song);
-    await loadAndPlay(song);
-  };
-
-  const playFromJamendoTrack = async (t: Track) => {
-    const song: CurrentSong = {
-      title: t.name ?? "Sin título",
-      artist: t.artist_name ?? "Artista desconocido",
-      image: t.album_image || t.image || "https://picsum.photos/200",
-      audio: t.audio,
-    };
-    const idx = queue.findIndex((q) => q.audio === song.audio);
-    if (idx >= 0) {
-      await playTrackByIndex(idx);
-    } else {
-      setCurrentIndex(-1);
+  const playTrackByIndex = useCallback(
+    async (index: number) => {
+      if (index < 0 || index >= queue.length) return;
+      const song = queue[index];
+      setCurrentIndex(index);
       _setCurrentSong(song);
       await loadAndPlay(song);
-    }
-  };
+    },
+    [loadAndPlay, queue]
+  );
 
-  const togglePlayPause = async () => {
-    const sound = soundRef.current;
-    if (!sound) return;
-    const status = (await sound.getStatusAsync()) as AVPlaybackStatusSuccess;
-    if (!status.isLoaded) return;
-    if (status.isPlaying) {
-      await sound.pauseAsync();
+  const playFromJamendoTrack = useCallback(
+    async (t: Track) => {
+      const song: CurrentSong = {
+        title: t.name ?? "Sin título",
+        artist: t.artist_name ?? "Artista desconocido",
+        image: t.album_image || t.image || "https://picsum.photos/200",
+        audio: t.audio,
+      };
+      const idx = queue.findIndex((q) => q.audio === song.audio);
+      if (idx >= 0) {
+        await playTrackByIndex(idx);
+      } else {
+        setCurrentIndex(-1);
+        _setCurrentSong(song);
+        await loadAndPlay(song);
+      }
+    },
+    [loadAndPlay, playTrackByIndex, queue]
+  );
+
+  const togglePlayPause = useCallback(async () => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    if (player.playing) {
+      player.pause();
     } else {
-      await sound.playAsync();
+      player.play();
     }
-  };
+  }, []);
 
-  const next = async () => {
+  const next = useCallback(async () => {
     if (queue.length === 0) return;
     const nextIndex = currentIndex + 1 < queue.length ? currentIndex + 1 : 0;
     await playTrackByIndex(nextIndex);
-  };
+  }, [currentIndex, playTrackByIndex, queue.length]);
 
-  const previous = async () => {
-    const sound = soundRef.current;
-    if (!sound) return;
-    const status = (await sound.getStatusAsync()) as AVPlaybackStatusSuccess;
-    if (!status.isLoaded) return;
+  const previous = useCallback(async () => {
+    const player = playerRef.current;
+    if (!player) return;
 
-    // Si ya pasó de 3s, volver al inicio; si no, ir a la anterior
-    if ((status.positionMillis ?? 0) > 3000) {
-      await sound.setPositionAsync(0);
+    if (positionMillis > 3000) {
+      try {
+        await player.seekTo(0);
+      } catch {}
       setPositionMillis(0);
       return;
     }
@@ -230,17 +267,27 @@ export const MusicPlayerProvider = ({ children }: { children: React.ReactNode })
     if (queue.length === 0) return;
     const prevIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : queue.length - 1;
     await playTrackByIndex(prevIndex);
-  };
+  }, [currentIndex, playTrackByIndex, positionMillis, queue.length]);
 
-  const seekTo = async (ms: number) => {
-    const sound = soundRef.current;
-    if (!sound) return;
-    const status = (await sound.getStatusAsync()) as AVPlaybackStatusSuccess;
-    if (!status.isLoaded) return;
-    const target = Math.max(0, Math.min(ms, status.durationMillis ?? ms));
-    await sound.setPositionAsync(target);
-    setPositionMillis(target);
-  };
+  const seekTo = useCallback(
+    async (ms: number) => {
+      const player = playerRef.current;
+      if (!player) return;
+
+      const target = Math.max(0, Math.min(ms, durationMillis || ms));
+      try {
+        await player.seekTo(target / 1000);
+        setPositionMillis(target);
+      } catch (error) {
+        console.warn("No se pudo cambiar la posición de reproducción", error);
+      }
+    },
+    [durationMillis]
+  );
+
+  useEffect(() => {
+    nextRef.current = next;
+  }, [next]);
 
   return (
     <MusicPlayerContext.Provider

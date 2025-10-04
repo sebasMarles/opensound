@@ -33,7 +33,7 @@ export default function RegisterScreen() {
     try {
       await register(data);
       router.replace('/(tabs)');
-    } catch (e) {
+    } catch {
       // Error ya manejado en el store
     }
   };

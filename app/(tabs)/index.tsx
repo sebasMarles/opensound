@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { getRecentSongs, searchSongs } from "../../services/jamendo";
 import { useMusicPlayer } from "../../context/MusicPlayerContext";
+import { useAuth } from "../../context/AuthContext";
 
 type TagOption = { label: string; query: string };
 
@@ -24,6 +25,7 @@ const TAGS: TagOption[] = [
 export default function HomeScreen() {
   const router = useRouter();
   const { setQueueFromJamendo, playFromJamendoTrack } = useMusicPlayer();
+  const { token, signOut } = useAuth();
   const [recent, setRecent] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -58,7 +60,7 @@ export default function HomeScreen() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [setQueueFromJamendo]);
 
   const coverOf = (t: any) => t?.album_image || t?.image || "https://picsum.photos/200";
 
@@ -69,6 +71,25 @@ export default function HomeScreen() {
       console.log("Error al reproducir:", e);
     }
   };
+
+  const handleProfilePress = useCallback(() => {
+    if (token) {
+      router.push("/profile");
+    } else {
+      router.push("/(auth)/login");
+    }
+  }, [router, token]);
+
+  const handleLogout = useCallback(() => {
+    if (!token) return;
+    signOut()
+      .then(() => {
+        router.replace("/(auth)/login");
+      })
+      .catch((error) => {
+        console.warn("No se pudo cerrar sesión", error);
+      });
+  }, [router, signOut, token]);
 
   const handleFilter = async (tag: TagOption) => {
     try {
@@ -114,14 +135,24 @@ export default function HomeScreen() {
             />
             <Text className="text-white text-xl font-bold">OpenSound</Text>
           </View>
-          <View className="flex-row space-x-4">
-            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+          <View className="flex-row items-center space-x-4">
+            <TouchableOpacity onPress={handleProfilePress}>
               <Image
                 source={require("../../assets/usuario.png")}
                 className="w-8 h-8"
                 resizeMode="contain"
               />
             </TouchableOpacity>
+            {token && (
+              <TouchableOpacity
+                onPress={handleLogout}
+                className="border border-purple-500 px-3 py-1 rounded-full"
+              >
+                <Text className="text-purple-300 text-sm font-semibold">
+                  Cerrar sesión
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
