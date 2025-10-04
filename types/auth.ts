@@ -10,3 +10,11 @@ export type AuthTokens = {
   token: string;
   refreshToken?: string;
 };
+
+// 👇 Nuevo tipo
+export type RegisterCredentials = {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+};

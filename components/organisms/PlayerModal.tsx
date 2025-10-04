@@ -117,10 +117,23 @@ export default function PlayerModal() {
       {/* Cover centrado, ancho consistente */}
       <View className="w-full items-center mt-4">
         <Image
-          source={{ uri: currentSong.image }}
+          source={{
+            uri:
+              typeof currentSong.image === "string" && currentSong.image.length > 0
+                ? currentSong.image
+                : "https://picsum.photos/300",
+          }}
           style={{ width: coverSize, height: coverSize, borderRadius: 16 }}
           resizeMode="cover"
         />
+
+        <Text className="text-white text-2xl font-bold" numberOfLines={1}>
+          {currentSong.title || "Sin título"}
+        </Text>
+        <Text className="text-gray-400 text-base mt-1" numberOfLines={1}>
+          {currentSong.artist || "Artista desconocido"}
+        </Text>
+
       </View>
 
       {/* Título y artista */}

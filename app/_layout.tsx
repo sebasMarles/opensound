@@ -2,6 +2,7 @@ import { ActivityIndicator, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "../context/AuthContext";
+import { SafeAreaProvider } from "react-native-safe-area-context"; // ✅ IMPORTANTE
 
 const AuthenticatedStack = () => {
   const { token, loading } = useAuth();
@@ -37,9 +38,11 @@ const AuthenticatedStack = () => {
 
 const RootLayout = () => {
   return (
-    <AuthProvider>
-      <AuthenticatedStack />
-    </AuthProvider>
+    <SafeAreaProvider>  {/* ✅ AÑADIDO */}
+      <AuthProvider>
+        <AuthenticatedStack />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 };
 
