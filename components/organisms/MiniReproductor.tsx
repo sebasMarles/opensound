@@ -23,7 +23,7 @@ export default function MiniReproductor() {
       : "https://picsum.photos/200";
 
   return (
-    <View className="bg-neutral-900 border-t border-purple-600 px-4 py-3">
+    <View className="bg-neutral-900 border-t px-4 py-3">
       <View className="absolute left-0 right-0 top-0 h-[2px] bg-neutral-800" />
       <View
         style={{ width: `${clampedProgress * 100}%` }}

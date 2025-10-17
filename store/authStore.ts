@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { AuthTokens, AuthUser, RegisterCredentials } from "../types/auth";
+import { register as apiRegister, login as apiLogin } from "../services/auth"; 
 
 type AuthState = {
   user: AuthUser | null;
@@ -7,7 +8,10 @@ type AuthState = {
   isLoading: boolean;
   error: string | null;
   register: (
-    data: RegisterCredentials,
+    data: RegisterCredentials
+  ) => Promise<{ user: AuthUser; tokens: AuthTokens }>;
+  login: (
+    credentials: { email: string; password: string }
   ) => Promise<{ user: AuthUser; tokens: AuthTokens }>;
   setSession: (payload: { user: AuthUser; tokens: AuthTokens }) => void;
   clearSession: () => void;
@@ -20,26 +24,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
 
-  // Simulación de registro
+  // 🔹 Registro real (usa el backend)
   register: async (data) => {
     set({ isLoading: true, error: null });
     try {
-      // Aquí iría tu llamada real al backend:
-      // const res = await fetch(`${API_URL}/register`, {...})
-      console.log("📤 Registrando usuario:", data);
-
-      // Simulación de éxito
-      const fakeUser: AuthUser = {
-        id: "1",
-        email: data.email,
+      console.log("📤 Registrando usuario (real):", data);
+      const res = await apiRegister({
         name: data.name,
-        role: "user",
-      };
-      const fakeTokens: AuthTokens = { token: "fake-token" };
+        email: data.email,
+        password: data.password,
+      });
 
       const session = {
-        user: fakeUser,
-        tokens: fakeTokens,
+        user: res.user!,
+        tokens: { token: res.token },
       };
 
       set({
@@ -48,15 +46,41 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       return session;
-    } catch (err) {
+    } catch (err: any) {
+      console.error("❌ Error al registrar usuario:", err.message);
       set({
-        error: "Error al registrar usuario",
+        error: err.message ?? "Error al registrar usuario",
         isLoading: false,
       });
-      if (err instanceof Error) {
-        throw err;
-      }
-      throw new Error("Error al registrar usuario");
+      throw err;
+    }
+  },
+
+  // 🔹 Login real (usa el backend)
+  login: async (credentials) => {
+    set({ isLoading: true, error: null });
+    try {
+      console.log("📤 Iniciando sesión (real):", credentials);
+      const res = await apiLogin(credentials);
+
+      const session = {
+        user: res.user!,
+        tokens: { token: res.token },
+      };
+
+      set({
+        ...session,
+        isLoading: false,
+      });
+
+      return session;
+    } catch (err: any) {
+      console.error("❌ Error al iniciar sesión:", err.message);
+      set({
+        error: err.message ?? "Error al iniciar sesión",
+        isLoading: false,
+      });
+      throw err;
     }
   },
 

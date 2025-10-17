@@ -17,7 +17,7 @@ export const AUTH_USER_STORAGE_KEY = "@opensound/user";
 type SignInPayload = {
   email: string;
   password: string;
-};
+};  
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -54,7 +54,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     })();
   }, [setSession]);
+//restaura la sesion del usuario al iniciar la app
 
+  // Guardar cambios en sesión
   useEffect(() => {
     if (restoring) return;
     if (!user || !authToken) return;
@@ -126,7 +128,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [authToken, loading, restoring, signIn, signOut, user],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}
+  </AuthContext.Provider>;
 };
 
 export const useAuth = () => {
