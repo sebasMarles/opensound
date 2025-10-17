@@ -6,7 +6,15 @@ const EXPO_PUBLIC_JAMENDO_API_URL = "https://api.jamendo.com/v3.0";
 /// services/auth.ts
 import type { AuthUser } from "../types/auth";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+const DEFAULT_API_BASE_URL = "https://opensound.icu";
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "") ?? DEFAULT_API_BASE_URL;
+
+if (!process.env.EXPO_PUBLIC_API_URL) {
+  console.warn(
+    `⚠️ EXPO_PUBLIC_API_URL no está definido. Usando dominio por defecto: ${DEFAULT_API_BASE_URL}`
+  );
+}
 
 // Tipos
 export type LoginPayload = {
@@ -25,27 +33,10 @@ export type LoginResponse = {
   user?: AuthUser;
 };
 
-const DEFAULT_DELAY_MS = 600;
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /**
  * LOGIN (Iniciar sesión)
  */
 export async function login(credentials: LoginPayload): Promise<LoginResponse> {
-  if (!API_BASE_URL) {
-    console.warn("⚠️ No hay API_BASE_URL — usando modo demo");
-    await delay(DEFAULT_DELAY_MS);
-    return {
-      token: `demo-token-${Date.now()}`,
-      user: {
-        id: credentials.email,
-        email: credentials.email,
-        name: credentials.email.split("@")[0] ?? credentials.email,
-        role: "user",
-      },
-    };
-  }
-
   console.log("Enviando petición de LOGIN a:", `${API_BASE_URL}/auth/login`);
   console.log("Payload:", credentials);
 
@@ -73,20 +64,6 @@ export async function login(credentials: LoginPayload): Promise<LoginResponse> {
 export async function register(
   payload: RegisterPayload
 ): Promise<LoginResponse> {
-  if (!API_BASE_URL) {
-    console.warn("⚠️ No hay API_BASE_URL — usando modo demo");
-    await delay(DEFAULT_DELAY_MS);
-    return {
-      token: `demo-token-${Date.now()}`,
-      user: {
-        id: payload.email,
-        email: payload.email,
-        name: payload.name,
-        role: "user",
-      },
-    };
-  }
-
   console.log(
     "Enviando petición de REGISTER a:",
     `${API_BASE_URL}/auth/register`

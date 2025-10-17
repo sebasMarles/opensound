@@ -1,10 +1,14 @@
 // services/backend.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+const DEFAULT_API_BASE_URL = "https://opensound.icu";
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "") ?? DEFAULT_API_BASE_URL;
 
-if (!API_BASE_URL) {
-  console.warn("⚠️ EXPO_PUBLIC_API_URL no está definido. Configura tu .env de Expo.");
+if (!process.env.EXPO_PUBLIC_API_URL) {
+  console.warn(
+    `⚠️ EXPO_PUBLIC_API_URL no está definido. Usando dominio por defecto: ${DEFAULT_API_BASE_URL}`
+  );
 }
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
