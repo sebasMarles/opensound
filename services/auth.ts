@@ -1,22 +1,8 @@
-// services/api.ts
-
-// URL base de Jamendo
-const EXPO_PUBLIC_JAMENDO_API_URL = "https://api.jamendo.com/v3.0";
-
-/// services/auth.ts
 import type { AuthUser } from "../types/auth";
+import { getApiBaseUrl } from "../hooks/useApiBaseUrl";
 
-const DEFAULT_API_BASE_URL = "https://opensound.icu";
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "") ?? DEFAULT_API_BASE_URL;
+const API_BASE_URL = getApiBaseUrl();
 
-if (!process.env.EXPO_PUBLIC_API_URL) {
-  console.warn(
-    `⚠️ EXPO_PUBLIC_API_URL no está definido. Usando dominio por defecto: ${DEFAULT_API_BASE_URL}`
-  );
-}
-
-// Tipos
 export type LoginPayload = {
   email: string;
   password: string;
@@ -30,61 +16,91 @@ export type RegisterPayload = {
 
 export type LoginResponse = {
   token: string;
-  user?: AuthUser;
+  user: AuthUser;
 };
 
-/**
- * LOGIN (Iniciar sesión)
- */
+type AuthResponse = {
+  token?: string;
+  user?: AuthUser;
+  message?: string;
+  error?: string;
+};
+
+function ensureAuthUser(
+  incomingUser: AuthUser | undefined,
+  fallbackEmail: string,
+  fallbackName?: string,
+): AuthUser {
+  const email = incomingUser?.email ?? fallbackEmail;
+  const name = incomingUser?.name ?? fallbackName ?? email.split("@")[0] ?? email;
+
+  return {
+    ...incomingUser,
+    id: incomingUser?.id ?? email,
+    email,
+    name,
+  };
+}
+
+function buildUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}${normalizedPath}`;
+}
+
+async function postAuth(path: string, body: unknown): Promise<AuthResponse> {
+  const response = await fetch(buildUrl(path), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const text = await response.text();
+
+  let payload: AuthResponse = {};
+  if (text) {
+    try {
+      payload = JSON.parse(text) as AuthResponse;
+    } catch {
+      payload = { message: text };
+    }
+  }
+
+  if (!response.ok) {
+    const message = payload.message ?? payload.error ?? `HTTP ${response.status}`;
+    throw new Error(message);
+  }
+
+  if (!text) {
+    throw new Error("La respuesta del servidor no contiene datos");
+  }
+
+  if (!payload || typeof payload !== "object") {
+    throw new Error("La respuesta del servidor no es JSON válido");
+  }
+
+  return payload;
+}
+
 export async function login(credentials: LoginPayload): Promise<LoginResponse> {
-  console.log("Enviando petición de LOGIN a:", `${API_BASE_URL}/auth/login`);
-  console.log("Payload:", credentials);
+  const payload = await postAuth("/auth/login", credentials);
 
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(credentials),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(errorText || "No se pudo iniciar sesión");
+  if (!payload.token) {
+    throw new Error("La respuesta del servidor no contiene un token válido");
   }
 
-  const data = (await res.json()) as LoginResponse;
-  if (!data?.token) throw new Error("Respuesta inválida del servidor");
-
-  console.log("Login exitoso:", data);
-  return data;
+  const user = ensureAuthUser(payload.user, credentials.email);
+  return { token: payload.token, user };
 }
 
-/**
- * REGISTER (Registrar usuario)
- */
-export async function register(
-  payload: RegisterPayload
-): Promise<LoginResponse> {
-  console.log(
-    "Enviando petición de REGISTER a:",
-    `${API_BASE_URL}/auth/register`
-  );
-  console.log("Payload:", payload);
+export async function register(payload: RegisterPayload): Promise<LoginResponse> {
+  const response = await postAuth("/auth/register", payload);
 
-  const res = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(errorText || "No se pudo registrar el usuario");
+  if (!response.token) {
+    throw new Error("La respuesta del servidor no contiene un token válido");
   }
 
-  const data = (await res.json()) as LoginResponse;
-  if (!data?.token) throw new Error("Respuesta inválida del servidor");
-
-  console.log("Registro exitoso:", data);
-  return data;
+  const user = ensureAuthUser(response.user, payload.email, payload.name);
+  return { token: response.token, user };
 }
 
+export { ensureAuthUser };

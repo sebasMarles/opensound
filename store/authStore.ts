@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { AuthTokens, AuthUser, RegisterCredentials } from "../types/auth";
-import { register as apiRegister, login as apiLogin } from "../services/auth"; 
+import { ensureAuthUser, login as apiLogin, register as apiRegister } from "../services/auth";
 
 type AuthState = {
   user: AuthUser | null;
@@ -8,10 +8,10 @@ type AuthState = {
   isLoading: boolean;
   error: string | null;
   register: (
-    data: RegisterCredentials
+    data: RegisterCredentials,
   ) => Promise<{ user: AuthUser; tokens: AuthTokens }>;
   login: (
-    credentials: { email: string; password: string }
+    credentials: { email: string; password: string },
   ) => Promise<{ user: AuthUser; tokens: AuthTokens }>;
   setSession: (payload: { user: AuthUser; tokens: AuthTokens }) => void;
   clearSession: () => void;
@@ -24,19 +24,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
 
-  // 🔹 Registro real (usa el backend)
   register: async (data) => {
     set({ isLoading: true, error: null });
     try {
-      console.log("📤 Registrando usuario (real):", data);
       const res = await apiRegister({
         name: data.name,
         email: data.email,
         password: data.password,
       });
 
+      const ensuredUser = ensureAuthUser(res.user, data.email, data.name);
       const session = {
-        user: res.user!,
+        user: ensuredUser,
         tokens: { token: res.token },
       };
 
@@ -47,24 +46,22 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       return session;
     } catch (err: any) {
-      console.error("❌ Error al registrar usuario:", err.message);
       set({
-        error: err.message ?? "Error al registrar usuario",
+        error: err?.message ?? "Error al registrar usuario",
         isLoading: false,
       });
       throw err;
     }
   },
 
-  // 🔹 Login real (usa el backend)
   login: async (credentials) => {
     set({ isLoading: true, error: null });
     try {
-      console.log("📤 Iniciando sesión (real):", credentials);
       const res = await apiLogin(credentials);
+      const ensuredUser = ensureAuthUser(res.user, credentials.email);
 
       const session = {
-        user: res.user!,
+        user: ensuredUser,
         tokens: { token: res.token },
       };
 
@@ -75,9 +72,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       return session;
     } catch (err: any) {
-      console.error("❌ Error al iniciar sesión:", err.message);
       set({
-        error: err.message ?? "Error al iniciar sesión",
+        error: err?.message ?? "Error al iniciar sesión",
         isLoading: false,
       });
       throw err;
