@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,12 +14,14 @@ import Text from "@/ui/atoms/Text";
 import Button from "@/ui/atoms/Button";
 import { Input } from "@/ui/atoms/Input";
 import { useAuthStore } from "@/core/auth/authStore";
+import { useAuth } from "@/core/auth/AuthProvider";
 import type { RegisterCredentials } from "@/types/auth";
 
 export default function RegisterScreen() {
   const router = useRouter();
   // Reutilizamos el store para aprovechar la lógica de registro y manejo de errores.
   const { register: registerUser, isLoading, error, clearError } = useAuthStore();
+  const { token } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -40,11 +42,15 @@ export default function RegisterScreen() {
 
   const password = watch("password");
 
+  useEffect(() => {
+    if (!token) return;
+    router.replace("/(tabs)");
+  }, [router, token]);
+
   const onSubmit = async (values: RegisterCredentials) => {
     clearError();
     try {
       await registerUser(values);
-      router.replace("/(tabs)");
     } catch {
       // El store ya expone el mensaje de error.
     }

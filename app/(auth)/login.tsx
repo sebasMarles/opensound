@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Controller, useForm } from "react-hook-form";
@@ -24,15 +24,19 @@ export default function Login() {
     defaultValues: { email: "", password: "" },
   });
   // useAuth provee los métodos de sesión expuestos por el provider global.
-  const { signIn, loading } = useAuth();
+  const { signIn, loading, token } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    router.replace("/(tabs)");
+  }, [token]);
 
   const onSubmit = async (data: FormData) => {
     try {
       setErrorMessage(null);
       await signIn({ email: data.email.trim(), password: data.password });
-      router.replace("/(tabs)");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "No se pudo iniciar sesión";

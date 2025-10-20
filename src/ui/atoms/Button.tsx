@@ -3,8 +3,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   GestureResponderEvent,
-  Text,
 } from "react-native";
+import Text from "./Text";
 
 type ButtonProps = {
   title?: string;
@@ -47,30 +47,18 @@ export default function Button({
     disabled ? "opacity-50" : ""
   } ${fullWidth ? "w-full" : ""} ${className}`;
 
+  const textColor = variant === "outline" ? "text-purple-400" : "text-white";
+
   const renderChildren = () => {
     if (typeof children === "string") {
-      return (
-        <Text
-          className={`font-bold ${
-            variant === "outline" ? "text-purple-400" : "text-white"
-          }`}
-        >
-          {children}
-        </Text>
-      );
+      return <Text className={`font-bold ${textColor}`}>{children}</Text>;
     }
 
-    return (
-      children ?? (
-        <Text
-          className={`font-bold ${
-            variant === "outline" ? "text-purple-400" : "text-white"
-          }`}
-        >
-          {title}
-        </Text>
-      )
-    );
+    if (children) {
+      return children;
+    }
+
+    return <Text className={`font-bold ${textColor}`}>{title}</Text>;
   };
 
   return (
