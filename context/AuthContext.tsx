@@ -11,13 +11,13 @@ import type { AuthUser } from "../types/auth";
 import { useAuthStore } from "../store/authStore";
 import { login } from "../services/auth";
 
-const TOKEN_KEY = "@opensound/token";
-const USER_KEY = "@opensound/user";
+export const AUTH_TOKEN_STORAGE_KEY = "@opensound/token";
+export const AUTH_USER_STORAGE_KEY = "@opensound/user";
 
 type SignInPayload = {
   email: string;
   password: string;
-};
+};  
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -33,13 +33,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, tokens, setSession, clearSession } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(true);
+  const authToken = tokens?.token ?? null;
 
   useEffect(() => {
     (async () => {
       try {
         const [storedToken, storedUser] = await Promise.all([
-          AsyncStorage.getItem(TOKEN_KEY),
-          AsyncStorage.getItem(USER_KEY),
+          AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY),
+          AsyncStorage.getItem(AUTH_USER_STORAGE_KEY),
         ]);
 
         if (storedToken && storedUser) {
@@ -53,13 +54,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     })();
   }, [setSession]);
+//restaura la sesion del usuario al iniciar la app
+
+  // Guardar cambios en sesión
+  useEffect(() => {
+    if (restoring) return;
+    if (!user || !authToken) return;
+
+    Promise.all([
+      AsyncStorage.setItem(AUTH_TOKEN_STORAGE_KEY, authToken),
+      AsyncStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user)),
+    ]).catch((error) => {
+      console.warn("No se pudo guardar la sesión", error);
+    });
+  }, [authToken, restoring, user]);
 
   const persistSession = useCallback(
     async (nextUser: AuthUser, token: string) => {
       setSession({ user: nextUser, tokens: { token } });
       await Promise.all([
-        AsyncStorage.setItem(TOKEN_KEY, token),
-        AsyncStorage.setItem(USER_KEY, JSON.stringify(nextUser)),
+        AsyncStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token),
+        AsyncStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(nextUser)),
       ]);
     },
     [setSession],
@@ -94,8 +109,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       clearSession();
       await Promise.all([
-        AsyncStorage.removeItem(TOKEN_KEY),
-        AsyncStorage.removeItem(USER_KEY),
+        AsyncStorage.removeItem(AUTH_TOKEN_STORAGE_KEY),
+        AsyncStorage.removeItem(AUTH_USER_STORAGE_KEY),
       ]);
     } finally {
       setLoading(false);
@@ -105,15 +120,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const value = useMemo<AuthContextType>(
     () => ({
       user,
-      token: tokens?.token ?? null,
+      token: authToken,
       loading: loading || restoring,
       signIn,
       signOut,
     }),
-    [loading, restoring, signIn, signOut, tokens?.token, user],
+    [authToken, loading, restoring, signIn, signOut, user],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}
+  </AuthContext.Provider>;
 };
 
 export const useAuth = () => {

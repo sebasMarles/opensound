@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "opensound",
-    "slug": "opensound-app",
+    "slug": "opensound",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -33,7 +33,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5e0ca68f-bb43-407b-a709-0afe0a0fe4e8"
+        "projectId": "0611dda5-655e-48bf-886f-1166c08108d4"
       }
     },
     "owner": "sebastianmarles"

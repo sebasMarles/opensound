@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
-import {View,Text,TextInput,TouchableOpacity,KeyboardAvoidingView,Platform,ScrollView,Image,} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from '../../store/authStore';
-import { RegisterCredentials } from '../../types/auth';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Image,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useForm, Controller } from "react-hook-form";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "../../store/authStore";
+import { RegisterCredentials } from "../../types/auth";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -33,7 +42,7 @@ export default function RegisterScreen() {
     try {
       await register(data);
       router.replace('/(tabs)');
-    } catch (e) {
+    } catch {
       // Error ya manejado en el store
     }
   };
@@ -49,7 +58,6 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="flex-1 px-6 pt-16">
-          {/* Header */}
           <View className="flex-row items-center mb-8">
             <TouchableOpacity
               onPress={() => router.back()}
@@ -60,7 +68,6 @@ export default function RegisterScreen() {
             <Text className="text-white text-xl font-bold">Crear Cuenta</Text>
           </View>
 
-          {/* Logo y título */}
           <View className="items-center mb-8">
             <Image
               source={require('../../assets/logo.png')}
@@ -73,9 +80,7 @@ export default function RegisterScreen() {
             </Text>
           </View>
 
-          {/* Formulario */}
           <View className="space-y-5">
-            {/* Name */}
             <View>
               <Text className="text-white text-sm font-medium mb-2">Nombre completo</Text>
               <Controller
@@ -103,7 +108,6 @@ export default function RegisterScreen() {
               )}
             </View>
 
-            {/* Email */}
             <View>
               <Text className="text-white text-sm font-medium mb-2">Email</Text>
               <Controller
@@ -135,7 +139,6 @@ export default function RegisterScreen() {
               )}
             </View>
 
-            {/* Password */}
             <View>
               <Text className="text-white text-sm font-medium mb-2">Contraseña</Text>
               <View className="relative">
@@ -176,7 +179,6 @@ export default function RegisterScreen() {
               )}
             </View>
 
-            {/* Confirm Password */}
             <View>
               <Text className="text-white text-sm font-medium mb-2">Confirmar contraseña</Text>
               <View className="relative">
@@ -218,14 +220,12 @@ export default function RegisterScreen() {
               )}
             </View>
 
-            {/* Error message */}
             {error && (
               <View className="bg-red-900/20 border border-red-500 rounded-lg p-3">
                 <Text className="text-red-400 text-sm text-center">{error}</Text>
               </View>
             )}
 
-            {/* Register Button */}
             <TouchableOpacity
               className={`bg-purple-600 py-4 rounded-lg mt-6 ${isLoading ? 'opacity-50' : ''}`}
               onPress={handleSubmit(onSubmit)}
@@ -236,14 +236,12 @@ export default function RegisterScreen() {
               </Text>
             </TouchableOpacity>
 
-            {/* Terms */}
             <Text className="text-gray-400 text-xs text-center mt-4">
               Al registrarte, aceptas nuestros{' '}
               <Text className="text-purple-400">Términos de Servicio</Text> y{' '}
               <Text className="text-purple-400">Política de Privacidad</Text>
             </Text>
 
-            {/* Login Link */}
             <View className="flex-row justify-center items-center mt-6">
               <Text className="text-gray-400">¿Ya tienes cuenta? </Text>
               <TouchableOpacity onPress={() => router.push('/(auth)/login')}>

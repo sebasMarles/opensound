@@ -1,9 +1,11 @@
 import { View, Text, Image, ScrollView, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function Library() {
   const router = useRouter();
+  const { token } = useAuth();
 
   const recientes = [
     { id: 1, titulo: "Cúrame", portada: "https://picsum.photos/200" },
@@ -29,7 +31,11 @@ export default function Library() {
           </View>
 
           <View className="flex-row space-x-4">
-            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+            <TouchableOpacity
+              onPress={() =>
+                router.push(token ? "/profile" : "/(auth)/login")
+              }
+            >
               <Image
                 source={require("../../../assets/usuario.png")}
                 className="w-8 h-8"
