@@ -2,10 +2,11 @@
 import { Tabs, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, StyleSheet } from "react-native";
-import MiniReproductor from "../../components/MiniReproductor";
-import PlayerModal from "../../components/PlayerModal";
-import { MusicPlayerProvider } from "../../context/MusicPlayerContext";
+import MiniPlayer from "@/features/player/components/MiniPlayer";
+import NowPlayingModal from "@/features/player/components/NowPlayingModal";
+import { MusicPlayerProvider } from "@/core/player/MusicPlayerProvider";
 
+// Layout principal de pestañas que envuelve todas las vistas con el reproductor.
 export default function TabsLayout() {
   const pathname = usePathname();
 
@@ -55,11 +56,11 @@ export default function TabsLayout() {
 
         {pathname !== "/auth/login" && pathname !== "/auth/register" && (
           <View style={styles.miniPlayerWrapper}>
-            <MiniReproductor />
+            <MiniPlayer />
           </View>
         )}
 
-        <PlayerModal />
+        <NowPlayingModal />
       </View>
     </MusicPlayerProvider>
   );

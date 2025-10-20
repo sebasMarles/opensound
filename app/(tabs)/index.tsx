@@ -1,281 +1,204 @@
-// app/(tabs)/index.tsx
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  ActivityIndicator,
-  Animated,
-} from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Image, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { getRecentSongs, searchSongs } from "../../services/jamendo";
-import { useMusicPlayer } from "../../context/MusicPlayerContext";
-import { useAuth } from "../../context/AuthContext";
+import Text from "@/ui/atoms/Text";
+import Button from "@/ui/atoms/Button";
+import { TagFilter, TrackCard, TrackListItem } from "@/features/music/components";
+import {
+  getRecentSongs,
+  searchSongs,
+  type Track,
+} from "@/features/music/api/jamendoService";
+import { useMusicPlayer } from "@/core/player/MusicPlayerProvider";
+import { useAuth } from "@/core/auth/AuthProvider";
 
-type TagOption = { label: string; query: string };
-
-const TAGS: TagOption[] = [
+const TAGS = [
   { label: "Rock", query: "rock" },
   { label: "Reggaetón y vibras", query: "reggaeton" },
   { label: "Trap", query: "trap" },
+  { label: "Indie", query: "indie" },
+  { label: "Chill", query: "chill" },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { setQueueFromJamendo, playFromJamendoTrack } = useMusicPlayer();
   const { token, signOut } = useAuth();
+  const { setQueueFromJamendo, playFromJamendoTrack } = useMusicPlayer();
 
-  const [recent, setRecent] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentTag, setCurrentTag] = useState<string | null>(null);
 
-  const pulse = useRef(new Animated.Value(0.3)).current;
-
-  // Efecto de pulso para el texto "Cargando..."
+  // Carga inicial y cuando cambia el filtro seleccionado.
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0.3, duration: 700, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
+    let cancelled = false;
 
-  // Cargar canciones recientes (con protección y reintento)
-  useEffect(() => {
-    let ignore = false;
-
-    const loadRecent = async (retry = 1) => {
+    const load = async () => {
+      setLoading(true);
       try {
-        setError(null);
-        setLoading(true);
-        await new Promise((r) => setTimeout(r, 250)); // pequeño delay por estabilidad
-        const data = await getRecentSongs(12);
-        if (!ignore) {
-          setRecent(Array.isArray(data) ? data : []);
-          setQueueFromJamendo(Array.isArray(data) ? data : []);
+        const data = currentTag
+          ? await searchSongs(currentTag, 20)
+          : await getRecentSongs(20);
+        if (!cancelled) {
+          setTracks(data);
+          setQueueFromJamendo(data);
+          setError(null);
         }
-      } catch (e) {
-        if (retry > 0) {
-          await new Promise((r) => setTimeout(r, 600));
-          loadRecent(retry - 1);
-          return;
+      } catch (err) {
+        if (!cancelled) {
+          const message =
+            err instanceof Error ? err.message : "No se pudo cargar el contenido";
+          setError(message);
         }
-        if (!ignore) setError("No se pudieron cargar las canciones recientes.");
       } finally {
-        if (!ignore) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    loadRecent();
+    load();
+
     return () => {
-      ignore = true;
+      cancelled = true;
     };
-  }, [setQueueFromJamendo]);
+  }, [currentTag, setQueueFromJamendo]);
 
-  const coverOf = (t: any) =>
-    t?.album_image || t?.image || "https://picsum.photos/200";
+  const handlePlay = useCallback(
+    async (track: Track) => {
+      try {
+        await playFromJamendoTrack(track);
+      } catch (err) {
+        console.warn("No se pudo reproducir la canción", err);
+      }
+    },
+    [playFromJamendoTrack],
+  );
 
-  const playTrack = async (t: any) => {
-    try {
-      await playFromJamendoTrack(t);
-    } catch {}
-  };
+  const handleSelectTag = useCallback((tag: { label: string; query: string }) => {
+    setCurrentTag(tag.query);
+  }, []);
+
+  const heroTrack = useMemo(() => tracks[0], [tracks]);
 
   const handleProfilePress = useCallback(() => {
-    if (token) router.push("/profile");
-    else router.push("/(auth)/login");
+    if (token) {
+      router.push("/profile");
+    } else {
+      router.push("/(auth)/login");
+    }
   }, [router, token]);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     if (!token) return;
-    signOut()
-      .then(() => router.replace("/(auth)/login"))
-      .catch(() => {});
+    try {
+      await signOut();
+      router.replace("/(auth)/login");
+    } catch (err) {
+      console.warn("No se pudo cerrar la sesión", err);
+    }
   }, [router, signOut, token]);
 
-  const handleFilter = async (tag: TagOption) => {
-    try {
-      setError(null);
-      setLoading(true);
-      const data = await searchSongs(tag.query, 12);
-      setRecent(Array.isArray(data) ? data : []);
-      setQueueFromJamendo(Array.isArray(data) ? data : []);
-    } catch {
-      setError("No se pudieron cargar resultados para esta categoría.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Mostrar estado de carga
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-black items-center justify-center">
-        <ActivityIndicator size="large" color="#A855F7" />
-        <Animated.Text
-          style={{ opacity: pulse }}
-          className="text-white mt-4 text-base"
-        >
-          Cargando contenido...
-        </Animated.Text>
+        <ActivityIndicator color="#A855F7" size="large" />
+        <Text variant="caption" className="mt-3 text-gray-300">
+          Preparando tus recomendaciones...
+        </Text>
       </SafeAreaView>
     );
   }
 
-  // Mostrar error si existe
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-black items-center justify-center">
-        <Text className="text-red-400 text-base mb-3 text-center">{error}</Text>
-        <TouchableOpacity
-          onPress={() => router.reload()}
-          className="border border-purple-500 px-4 py-2 rounded-lg"
-        >
-          <Text className="text-purple-300 font-semibold">Reintentar</Text>
-        </TouchableOpacity>
+      <SafeAreaView className="flex-1 bg-black items-center justify-center px-6">
+        <Text className="text-red-400 text-center mb-4">{error}</Text>
+        <Button onPress={() => setCurrentTag(null)}>Intentar de nuevo</Button>
       </SafeAreaView>
     );
   }
 
-  // Si no hay canciones
-  if (!recent.length) {
-    return (
-      <SafeAreaView className="flex-1 bg-black items-center justify-center">
-        <Text className="text-gray-300 text-base">No hay canciones para mostrar.</Text>
-      </SafeAreaView>
-    );
-  }
-
-  // Render principal
   return (
     <SafeAreaView className="flex-1 bg-black">
       <ScrollView
-        style={{ flex: 1, paddingHorizontal: 16 }}
-        contentContainerStyle={{ paddingTop: 8, paddingBottom: 90 }}
+        className="flex-1 px-5"
+        contentContainerStyle={{ paddingBottom: 120, paddingTop: 12 }}
       >
-        {/* Header */}
-        <View className="flex-row justify-between items-center mb-6">
+        <View className="flex-row justify-between items-center mb-8">
           <View className="flex-row items-center">
             <Image
               source={require("../../assets/logo.png")}
-              className="w-8 h-8 mr-2"
+              className="w-8 h-8 mr-3"
               resizeMode="contain"
             />
-            <Text className="text-white text-xl font-bold">OpenSound</Text>
+            <Text variant="title">OpenSound</Text>
           </View>
-          <View className="flex-row items-center space-x-4">
-            <TouchableOpacity onPress={handleProfilePress}>
-              <Image
-                source={require("../../assets/usuario.png")}
-                className="w-8 h-8"
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
+
+          <View className="flex-row space-x-3 items-center">
             {token && (
-              <TouchableOpacity
+              <Button
+                size="sm"
+                variant="outline"
                 onPress={handleLogout}
-                className="border border-purple-500 px-3 py-1 rounded-full"
+                accessibilityLabel="Cerrar sesión"
               >
-                <Text className="text-purple-300 text-sm font-semibold">
-                  Cerrar sesión
-                </Text>
-              </TouchableOpacity>
+                Salir
+              </Button>
             )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onPress={handleProfilePress}
+              accessibilityLabel="Ir al perfil"
+            >
+              Perfil
+            </Button>
           </View>
         </View>
 
-        {/* Filtros */}
-        <View className="flex-row justify-around mb-6">
-          {TAGS.map((tag) => (
-            <TouchableOpacity
-              key={tag.query}
-              className="bg-purple-700 px-4 py-2 rounded-full"
-              onPress={() => handleFilter(tag)}
-            >
-              <Text className="text-white text-sm font-semibold">{tag.label}</Text>
-            </TouchableOpacity>
+        {heroTrack && (
+          <View
+            className="rounded-3xl p-6 border border-purple-900/40 mb-8"
+            style={{ backgroundColor: "rgba(38,38,38,0.85)" }}
+          >
+            <Text variant="subtitle" className="mb-2">
+              Sigue escuchando
+            </Text>
+            <Text className="text-white text-2xl font-bold" numberOfLines={1}>
+              {heroTrack.name}
+            </Text>
+            <Text variant="caption" className="mt-1">
+              {heroTrack.artist_name}
+            </Text>
+            <Button className="mt-5" onPress={() => handlePlay(heroTrack)}>
+              Reproducir
+            </Button>
+          </View>
+        )}
+
+        <TagFilter tags={TAGS} onSelect={handleSelectTag} />
+
+        <View className="mb-6">
+          <Text variant="subtitle" className="mb-4">
+            Descubre algo nuevo
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {tracks.slice(0, 10).map((track) => (
+              <TrackCard key={track.id} track={track} onPress={handlePlay} />
+            ))}
+          </ScrollView>
+        </View>
+
+        <View>
+          <Text variant="subtitle" className="mb-4">
+            Últimas canciones
+          </Text>
+          {tracks.slice(0, 12).map((track) => (
+            <TrackListItem key={track.id} track={track} onPress={handlePlay} />
           ))}
-        </View>
-
-        {/* Más recientes */}
-        <View className="flex-row justify-between items-center mb-4">
-          <Text className="text-white text-lg font-bold">Más recientes</Text>
-          <Text className="text-purple-400">Más</Text>
-        </View>
-
-        {/* Carrusel */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mb-6"
-        >
-          {recent.slice(0, 12).map((track: any) => {
-            const source = { uri: coverOf(track) };
-            const title = track?.name ?? "Sin título";
-            return (
-              <View key={track.id} className="mr-4 w-32">
-                <TouchableOpacity onPress={() => playTrack(track)}>
-                  <Image source={source} className="w-32 h-32 rounded-xl" />
-                  <Text
-                    className="text-white text-sm mt-2"
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {title}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            );
-          })}
-        </ScrollView>
-
-        {/* Lista */}
-        <View className="space-y-4">
-          {recent.slice(0, 8).map((track: any, idx: number) => {
-            const title = track?.name ?? "Sin título";
-            const artist = track?.artist_name ?? "Artista desconocido";
-            const imageSrc = { uri: coverOf(track) };
-
-            return (
-              <View
-                key={track?.id ?? `row-${idx}`}
-                className="flex-row items-center justify-between"
-              >
-                <TouchableOpacity
-                  className="flex-row items-center flex-1 pr-2"
-                  onPress={() => playTrack(track)}
-                >
-                  <Image source={imageSrc} className="w-12 h-12 rounded-lg mr-3" />
-                  <View className="flex-1">
-                    <Text className="text-white" numberOfLines={1} ellipsizeMode="tail">
-                      {title}
-                    </Text>
-                    <Text
-                      className="text-gray-400 text-xs"
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {artist}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity>
-                  <Image
-                    source={require("../../assets/songoptions.png")}
-                    className="w-6 h-6"
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
-              </View>
-            );
-          })}
         </View>
       </ScrollView>
     </SafeAreaView>

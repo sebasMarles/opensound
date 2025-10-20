@@ -1,9 +1,11 @@
 import { useMemo } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import { useAuth } from "../context/AuthContext";
+import Text from "@/ui/atoms/Text";
+import Button from "@/ui/atoms/Button";
+import { useAuth } from "@/core/auth/AuthProvider";
 
 const getInitials = (name?: string | null) => {
   if (!name) return "OS";
@@ -17,7 +19,7 @@ const getInitials = (name?: string | null) => {
     .join("");
 };
 
-const ProfileScreen = () => {
+export default function ProfileScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
@@ -59,16 +61,7 @@ const ProfileScreen = () => {
         </View>
       </View>
 
-      <TouchableOpacity
-        className="mt-12 bg-purple-600 py-3 rounded-xl"
-        onPress={() => router.replace("/(tabs)")}
-      >
-        <Text className="text-white text-center text-base font-semibold">
-          Ir al inicio
-        </Text>
-      </TouchableOpacity>
+      <Button className="mt-12" onPress={() => router.replace("/(tabs)")}>Ir al inicio</Button>
     </SafeAreaView>
   );
-};
-
-export default ProfileScreen;
+}
