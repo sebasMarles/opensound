@@ -1,10 +1,11 @@
 // app/_layout.tsx
 import { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import { Stack, useRouter, useRootNavigationState } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Network from "expo-network";
-import { AuthProvider, useAuth } from "../context/AuthContext";
+import Text from "@/ui/atoms/Text";
+import { AuthProvider, useAuth } from "@/core/auth/AuthProvider";
 
 // Subcomponente que controla las redirecciones seguras
 function AuthGate() {
@@ -36,7 +37,7 @@ function AuthGate() {
     if (!isConnected) return; // Si no hay Internet, no redirige aún
     if (!token) router.replace("/(auth)/login");
     else router.replace("/(tabs)");
-  }, [rootNavigation?.key, loading, token, isConnected]);
+  }, [rootNavigation?.key, loading, token, isConnected, router]);
 
   // Pantalla de carga o sin conexión
   if (loading || !rootNavigation?.key || isConnected === null) {
