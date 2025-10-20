@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { AuthTokens, AuthUser, RegisterCredentials } from "../../types/auth";
+import type { AuthTokens, AuthUser, RegisterCredentials } from "@/types/auth";
 import { ensureAuthUser, login as apiLogin, register as apiRegister } from "./authService";
 
 type AuthState = {

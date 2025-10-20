@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { AuthUser } from "../../types/auth";
+import type { AuthUser } from "@/types/auth";
 
 export const AUTH_TOKEN_STORAGE_KEY = "@opensound/token";
 export const AUTH_USER_STORAGE_KEY = "@opensound/user";

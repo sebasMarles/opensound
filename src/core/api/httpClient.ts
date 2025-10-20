@@ -1,9 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getApiBaseUrl } from "./baseUrl";
+import { getApiBaseUrl } from "@/hooks/useApiBaseUrl";
 import {
   AUTH_TOKEN_STORAGE_KEY,
   extractTokenFromStorageValue,
-} from "../auth/authStorage";
+} from "@/hooks/useAuthStorage";
 
 const API_BASE_URL = getApiBaseUrl();
 

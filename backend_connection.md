@@ -13,7 +13,7 @@ Este documento explica cómo enlazar el nuevo CRUD de playlists y el resto de pe
    # En Windows (PowerShell)
    $Env:EXPO_PUBLIC_API_URL="https://tu-dominio.com"
    ```
-3. Puedes añadir esta variable a un archivo `.env` y cargarlo con tu gestor de procesos preferido. El helper `getApiBaseUrl` en `src/core/api/baseUrl.ts` normaliza la URL y elimina barras finales duplicadas.
+3. Puedes añadir esta variable a un archivo `.env` y cargarlo con tu gestor de procesos preferido. El helper `getApiBaseUrl` en `src/hooks/useApiBaseUrl.ts` normaliza la URL y elimina barras finales duplicadas.
 
 ## 2. Autenticación: rutas y formato esperado
 

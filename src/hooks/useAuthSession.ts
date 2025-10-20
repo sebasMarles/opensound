@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ensureAuthUser, login } from "./authService";
-import { useAuthStore } from "./authStore";
-import { useAuthStorage } from "./authStorage";
+import { ensureAuthUser, login } from "@/core/auth/authService";
+import { useAuthStore } from "@/core/auth/authStore";
+import { useAuthStorage } from "./useAuthStorage";
 
 export type SignInPayload = {
   email: string;

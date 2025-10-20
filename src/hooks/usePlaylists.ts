@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { usePlaylistStore } from "../store/playlistStore";
+import { usePlaylistStore } from "@/features/playlists/store/playlistStore";
 
 // Hook centralizado que expone el estado y las acciones del store de playlists.
 export function usePlaylists(autoFetch: boolean = true) {

@@ -1,5 +1,10 @@
 import React from "react";
-import { TouchableOpacity, ActivityIndicator, GestureResponderEvent, Text } from "react-native";
+import {
+  TouchableOpacity,
+  ActivityIndicator,
+  GestureResponderEvent,
+  Text,
+} from "react-native";
 
 type ButtonProps = {
   title?: string;
@@ -11,12 +16,13 @@ type ButtonProps = {
   size?: "sm" | "md" | "lg";
   className?: string;
   accessibilityLabel?: string;
+  fullWidth?: boolean;
 };
 
 const base = "rounded-lg items-center justify-center";
 const variants = {
   primary: "bg-purple-600",
-  outline: "border border-purple-600",
+  outline: "bg-transparent border border-purple-500",
   ghost: "bg-transparent",
 } as const;
 const sizes = {
@@ -35,10 +41,37 @@ export default function Button({
   size = "md",
   className = "",
   accessibilityLabel,
+  fullWidth = false,
 }: ButtonProps) {
   const classes = `${base} ${variants[variant]} ${sizes[size]} ${
     disabled ? "opacity-50" : ""
-  } ${className}`;
+  } ${fullWidth ? "w-full" : ""} ${className}`;
+
+  const renderChildren = () => {
+    if (typeof children === "string") {
+      return (
+        <Text
+          className={`font-bold ${
+            variant === "outline" ? "text-purple-400" : "text-white"
+          }`}
+        >
+          {children}
+        </Text>
+      );
+    }
+
+    return (
+      children ?? (
+        <Text
+          className={`font-bold ${
+            variant === "outline" ? "text-purple-400" : "text-white"
+          }`}
+        >
+          {title}
+        </Text>
+      )
+    );
+  };
 
   return (
     <TouchableOpacity
@@ -49,19 +82,7 @@ export default function Button({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || title}
     >
-      {loading ? (
-        <ActivityIndicator color="#fff" />
-      ) : (
-        children ?? (
-          <Text
-            className={`font-bold ${
-              variant === "outline" ? "text-purple-400" : "text-white"
-            }`}
-          >
-            {title}
-          </Text>
-        )
-      )}
+      {loading ? <ActivityIndicator color="#fff" /> : renderChildren()}
     </TouchableOpacity>
   );
 }

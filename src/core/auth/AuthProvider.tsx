@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
-import { useAuthSession } from "./useAuthSession";
+import { useAuthSession } from "@/hooks/useAuthSession";
 
 export type AuthContextType = ReturnType<typeof useAuthSession>;
 

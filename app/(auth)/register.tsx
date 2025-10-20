@@ -232,6 +232,7 @@ export default function RegisterScreen() {
               onPress={handleSubmit(onSubmit)}
               loading={isLoading}
               accessibilityLabel="Crear cuenta"
+              fullWidth
             >
               Crear cuenta
             </Button>

@@ -5,7 +5,7 @@ import Text from "@/ui/atoms/Text";
 import Button from "@/ui/atoms/Button";
 import { useAuth } from "@/core/auth/AuthProvider";
 import { PlaylistForm, PlaylistList } from "@/features/playlists/components";
-import { usePlaylists } from "@/features/playlists/hooks/usePlaylists";
+import { usePlaylists } from "@/hooks/usePlaylists";
 import type { Playlist } from "@/features/playlists/types";
 
 export default function LibraryScreen() {

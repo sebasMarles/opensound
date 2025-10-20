@@ -147,6 +147,7 @@ export default function Login() {
             onPress={handleSubmit(onSubmit)}
             loading={loading}
             accessibilityLabel="Iniciar sesión"
+            fullWidth
           >
             Iniciar sesión
           </Button>
@@ -156,6 +157,7 @@ export default function Login() {
             className="mt-4"
             onPress={() => router.push("/(auth)/register")}
             accessibilityLabel="Ir a registro"
+            fullWidth
           >
             Crear cuenta
           </Button>

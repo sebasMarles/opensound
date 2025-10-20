@@ -1,5 +1,5 @@
-import type { AuthUser } from "../../types/auth";
-import { getApiBaseUrl } from "../api/baseUrl";
+import type { AuthUser } from "@/types/auth";
+import { getApiBaseUrl } from "@/hooks/useApiBaseUrl";
 
 // Dominio base centralizado para todas las peticiones de autenticación.
 const API_BASE_URL = getApiBaseUrl();
