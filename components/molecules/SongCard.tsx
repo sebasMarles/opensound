@@ -1,5 +1,5 @@
 // components/molecules/SongCard.tsx
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { useMusicPlayer } from "../../context/MusicPlayerContext"; // <- corregido
 
 export default function SongCard({ song }: { song: any }) {

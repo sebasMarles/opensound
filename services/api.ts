@@ -1,31 +1,38 @@
-// services/api.ts
-const JAMENDO_API_URL = "https://api.jamendo.com/v3.0";
-const CLIENT_ID = "c8500442";
+const DEFAULT_JAMENDO_BASE_URL = "https://api.jamendo.com/v3.0";
+const JAMENDO_API_URL =
+  process.env.EXPO_PUBLIC_JAMENDO_API_URL ?? DEFAULT_JAMENDO_BASE_URL;
+const JAMENDO_CLIENT_ID =
+  process.env.EXPO_PUBLIC_JAMENDO_CLIENT_ID ?? "c8500442";
 
 export type JamendoResponse<T> = {
-  headers: any;
+  headers: Record<string, unknown>;
   results: T[];
 };
 
 export async function apiFetch<T>(
   endpoint: string,
-  params: Record<string, any> = {}
+  params: Record<string, string | number | boolean | undefined> = {},
 ): Promise<JamendoResponse<T>> {
-  // Asegura el slash inicial
   const endpointPath = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   const url = new URL(`${JAMENDO_API_URL}${endpointPath}`);
 
-  // Agrega client_id y formato por conveniencia
-  const allParams = { client_id: CLIENT_ID, format: "json", ...params };
+  const allParams = {
+    client_id: JAMENDO_CLIENT_ID,
+    format: "json",
+    ...params,
+  };
+
   Object.entries(allParams).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
       url.searchParams.append(key, String(value));
     }
   });
 
-  const res = await fetch(url.toString());
-  if (!res.ok) {
-    throw new Error(`Error en la API de Jamendo: ${res.status}`);
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Error en la API de Jamendo: ${response.status}`);
   }
-  return res.json();
+
+  return (await response.json()) as JamendoResponse<T>;
 }

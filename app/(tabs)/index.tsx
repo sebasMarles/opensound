@@ -1,4 +1,3 @@
-// app/(tabs)/index.tsx
 import { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -9,6 +8,7 @@ import {
   ActivityIndicator,
   Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { getRecentSongs, searchSongs } from "../../services/jamendo";
 import { useMusicPlayer } from "../../context/MusicPlayerContext";
@@ -23,17 +23,12 @@ const TAGS: TagOption[] = [
 
 export default function HomeScreen() {
   const router = useRouter();
-  const {
-    setQueueFromJamendo,
-    playFromJamendoTrack, // reproducir al tocar
-  } = useMusicPlayer();
-
+  const { setQueueFromJamendo, playFromJamendoTrack } = useMusicPlayer();
   const [recent, setRecent] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  // Animación "Cargando contenido"
   const pulse = useRef(new Animated.Value(0.3)).current;
+
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -45,7 +40,6 @@ export default function HomeScreen() {
     return () => loop.stop();
   }, [pulse]);
 
-  // Carga inicial SIN dependencias (evita bucles)
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -54,7 +48,7 @@ export default function HomeScreen() {
         const data = await getRecentSongs(12);
         if (!mounted) return;
         setRecent(data || []);
-        setQueueFromJamendo(data || []); // prepara cola para next/prev
+        setQueueFromJamendo(data || []);
       } catch (e) {
         console.log("Error cargando recientes:", e);
       } finally {
@@ -64,11 +58,9 @@ export default function HomeScreen() {
     return () => {
       mounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // <- importante: deps vacías
+  }, []);
 
-  const coverOf = (t: any) =>
-    t?.album_image || t?.image || "https://picsum.photos/200";
+  const coverOf = (t: any) => t?.album_image || t?.image || "https://picsum.photos/200";
 
   const playTrack = async (t: any) => {
     try {
@@ -80,11 +72,10 @@ export default function HomeScreen() {
 
   const handleFilter = async (tag: TagOption) => {
     try {
-      setSelectedTag(tag.query);
       setLoading(true);
       const data = await searchSongs(tag.query, 12);
       setRecent(data || []);
-      setQueueFromJamendo(data || []); // actualiza cola según filtro
+      setQueueFromJamendo(data || []);
     } catch (e) {
       console.log(`Error buscando por tag ${tag.query}:`, e);
     } finally {
@@ -94,7 +85,8 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-black items-center justify-center">
+      <SafeAreaView className="flex-1 bg-black items-center justify-center">
+        {/* ✅ el SafeAreaView reemplaza al View raíz */}
         <ActivityIndicator size="large" color="#A855F7" />
         <Animated.Text
           style={{ opacity: pulse }}
@@ -102,12 +94,12 @@ export default function HomeScreen() {
         >
           Cargando contenido...
         </Animated.Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View className="flex-1 bg-black">
+    <SafeAreaView className="flex-1 bg-black">  {/* ✅ SafeAreaView aquí */}
       <ScrollView
         style={{ flex: 1, paddingHorizontal: 16 }}
         contentContainerStyle={{ paddingTop: 8, paddingBottom: 90 }}
@@ -123,7 +115,7 @@ export default function HomeScreen() {
             <Text className="text-white text-xl font-bold">OpenSound</Text>
           </View>
           <View className="flex-row space-x-4">
-            <TouchableOpacity onPress={() => router.push("/login")}>
+            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
               <Image
                 source={require("../../assets/usuario.png")}
                 className="w-8 h-8"
@@ -219,6 +211,6 @@ export default function HomeScreen() {
           })}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
