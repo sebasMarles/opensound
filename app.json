@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "opensound",
-    "slug": "opensound-app",
+    "slug": "opensound",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -28,13 +28,24 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#A855F7",
+          "sounds": ["./assets/notification.wav"]
+        }
+      ]
     ],
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5e0ca68f-bb43-407b-a709-0afe0a0fe4e8"
-      }
+        "projectId": "0611dda5-655e-48bf-886f-1166c08108d4"
+      },
+      "apiUrl": "https://opensound.icu",
+      "jamendoClientId": "c8500442",
+      "jamendoApiUrl": "https://api.jamendo.com/v3.0"
     },
     "owner": "sebastianmarles"
   }

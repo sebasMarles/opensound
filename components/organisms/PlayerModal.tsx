@@ -1,16 +1,22 @@
-import React, { useMemo, useRef, useState } from "react";
+"use client";
+
+import { useMemo, useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
   Image,
   TouchableOpacity,
   Animated,
-  LayoutChangeEvent,
+  type LayoutChangeEvent,
   Dimensions,
   StyleSheet,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Haptics from "expo-haptics";
 import { useMusicPlayer } from "../../context/MusicPlayerContext";
+import { useLikedSongs } from "../../hooks/useLikedSongs";
+import { useAuth } from "../../context/AuthContext";
+import { extractJamendoId } from "../../utils/jamendo";
 
 function formatTime(ms: number) {
   if (!ms || ms <= 0) return "0:00";
@@ -35,7 +41,10 @@ export default function PlayerModal() {
     seekTo,
   } = useMusicPlayer();
 
-  const [liked, setLiked] = useState(false);
+  const { token } = useAuth();
+  const { isLiked, toggleLike, refetch } = useLikedSongs();
+  const [isTogglingLike, setIsTogglingLike] = useState(false);
+
   const scale = useRef(new Animated.Value(1)).current;
 
   // Ancho de pantalla y tamaño del cover calculado
@@ -51,9 +60,45 @@ export default function PlayerModal() {
       Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
     ]).start();
   };
-  const onToggleLike = () => {
-    setLiked((v) => !v);
+
+  useEffect(() => {
+    if (isPlayerVisible && token) {
+      refetch();
+    }
+  }, [isPlayerVisible, token, refetch]);
+
+  const onToggleLike = async () => {
+    if (!token || !currentSong) return;
+
+    const jamendoId = extractJamendoId({
+      id: currentSong.id,
+      audio: currentSong.audio,
+      name: currentSong.title,
+    });
+
+    const songData = {
+      jamendoId,
+      name: currentSong.title,
+      artist_name: currentSong.artist,
+      image: currentSong.image,
+      audio: currentSong.audio,
+    };
+
+    setIsTogglingLike(true);
     animateLike();
+    Haptics.notificationAsync(
+      isLiked(jamendoId)
+        ? Haptics.NotificationFeedbackType.Success
+        : Haptics.NotificationFeedbackType.Success
+    );
+
+    try {
+      await toggleLike(songData);
+    } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsTogglingLike(false);
+    }
   };
 
   // Barra de progreso (seek)
@@ -88,28 +133,54 @@ export default function PlayerModal() {
     setPreview(null);
   };
 
+  const currentJamendoId = currentSong
+    ? extractJamendoId({
+        id: currentSong.id,
+        audio: currentSong.audio,
+        name: currentSong.title,
+      })
+    : "";
+  const liked = isLiked(currentJamendoId);
+
   if (!isPlayerVisible || !currentSong) return null;
 
   return (
     <View
-      style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.95)", zIndex: 50, elevation: 100 }]}
+      style={[
+        StyleSheet.absoluteFill,
+        { backgroundColor: "rgba(0,0,0,0.95)", zIndex: 50, elevation: 100 },
+      ]}
       pointerEvents="auto"
     >
       {/* Header - ancho completo */}
       <View className="w-full px-4 pt-12 pb-4 flex-row items-center justify-between">
         <TouchableOpacity
-          onPress={() => setPlayerVisible(false)}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setPlayerVisible(false);
+          }}
           className="p-2"
           accessibilityLabel="Cerrar"
         >
           <Ionicons name="chevron-down" size={28} color="white" />
         </TouchableOpacity>
 
-        <Text className="text-white text-base font-semibold">Reproduciendo</Text>
+        <Text className="text-white text-base font-semibold">
+          Reproduciendo
+        </Text>
 
-        <TouchableOpacity onPress={onToggleLike} className="p-2" accessibilityLabel="Me gusta">
+        <TouchableOpacity
+          onPress={onToggleLike}
+          className="p-2"
+          accessibilityLabel="Me gusta"
+          disabled={isTogglingLike || !token}
+        >
           <Animated.View style={{ transform: [{ scale }] }}>
-            <Ionicons name={liked ? "heart" : "heart-outline"} size={24} color={liked ? "#D400FF" : "white"} />
+            <Ionicons
+              name={liked ? "heart" : "heart-outline"}
+              size={24}
+              color={liked ? "#D400FF" : "white"}
+            />
           </Animated.View>
         </TouchableOpacity>
       </View>
@@ -117,7 +188,13 @@ export default function PlayerModal() {
       {/* Cover centrado, ancho consistente */}
       <View className="w-full items-center mt-4">
         <Image
-          source={{ uri: currentSong.image }}
+          source={{
+            uri:
+              typeof currentSong.image === "string" &&
+              currentSong.image.length > 0
+                ? currentSong.image
+                : "https://picsum.photos/300",
+          }}
           style={{ width: coverSize, height: coverSize, borderRadius: 16 }}
           resizeMode="cover"
         />
@@ -125,10 +202,18 @@ export default function PlayerModal() {
 
       {/* Título y artista */}
       <View className="w-full px-6 mt-6 items-center">
-        <Text className="text-white text-2xl font-bold" numberOfLines={1} ellipsizeMode="tail">
+        <Text
+          className="text-white text-2xl font-bold"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
           {currentSong.title}
         </Text>
-        <Text className="text-gray-400 text-base mt-1" numberOfLines={1} ellipsizeMode="tail">
+        <Text
+          className="text-gray-400 text-base mt-1"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
           {currentSong.artist}
         </Text>
       </View>
@@ -162,27 +247,54 @@ export default function PlayerModal() {
         {/* Times */}
         <View className="w-full flex-row justify-between mt-2">
           <Text className="text-gray-400 text-xs">
-            {formatTime(scrubbing && preview != null ? Math.floor(preview * durationMillis) : positionMillis)}
+            {formatTime(
+              scrubbing && preview != null
+                ? Math.floor(preview * durationMillis)
+                : positionMillis
+            )}
           </Text>
-          <Text className="text-gray-400 text-xs">{formatTime(durationMillis)}</Text>
+          <Text className="text-gray-400 text-xs">
+            {formatTime(durationMillis)}
+          </Text>
         </View>
       </View>
 
       {/* Controles, ancho completo */}
       <View className="w-full px-10 mt-8 flex-row items-center justify-between">
-        <TouchableOpacity onPress={previous} accessibilityLabel="Anterior" className="p-3">
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            previous();
+          }}
+          accessibilityLabel="Anterior"
+          className="p-3"
+        >
           <Ionicons name="play-skip-back" size={32} color="white" />
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={togglePlayPause}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            togglePlayPause();
+          }}
           accessibilityLabel={isPlaying ? "Pausar" : "Reproducir"}
           className="p-4 rounded-full bg-purple-600"
         >
-          <Ionicons name={isPlaying ? "pause" : "play"} size={32} color="white" />
+          <Ionicons
+            name={isPlaying ? "pause" : "play"}
+            size={32}
+            color="white"
+          />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={next} accessibilityLabel="Siguiente" className="p-3">
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            next();
+          }}
+          accessibilityLabel="Siguiente"
+          className="p-3"
+        >
           <Ionicons name="play-skip-forward" size={32} color="white" />
         </TouchableOpacity>
       </View>

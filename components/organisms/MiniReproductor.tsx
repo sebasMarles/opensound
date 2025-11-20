@@ -1,4 +1,3 @@
-// components/organisms/MiniReproductor.tsx
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { useMusicPlayer } from "../../context/MusicPlayerContext";
 
@@ -8,17 +7,23 @@ export default function MiniReproductor() {
     currentSong,
     togglePlayPause,
     next,
-    progress, // 0..1
-    setPlayerVisible, // para abrir el modal
+    progress,
+    setPlayerVisible,
   } = useMusicPlayer();
 
+  // si no hay canción actual, no renderizar nada
   if (!currentSong) return null;
 
-  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const clampedProgress = Math.max(0, Math.min(1, progress ?? 0));
+
+  // fallback seguro si falta la imagen
+  const imageUri =
+    typeof currentSong.image === "string" && currentSong.image.length > 0
+      ? currentSong.image
+      : "https://picsum.photos/200";
 
   return (
-    <View className="bg-neutral-900 border-t border-purple-600 px-4 py-3">
-      {/* Barra de progreso arriba */}
+    <View className="bg-neutral-900 border-t px-4 py-3">
       <View className="absolute left-0 right-0 top-0 h-[2px] bg-neutral-800" />
       <View
         style={{ width: `${clampedProgress * 100}%` }}
@@ -26,13 +31,11 @@ export default function MiniReproductor() {
       />
 
       <View className="flex-row items-center">
-        {/* Portada */}
         <Image
-          source={{ uri: currentSong.image }}
+          source={{ uri: imageUri }}
           className="w-12 h-12 rounded-lg mr-3"
         />
 
-        {/* Título y artista (tap abre modal) */}
         <TouchableOpacity
           className="flex-1"
           onPress={() => setPlayerVisible(true)}
@@ -43,20 +46,18 @@ export default function MiniReproductor() {
             numberOfLines={1}
             ellipsizeMode="tail"
           >
-            {currentSong.title}
+            {currentSong.title || "Sin título"}
           </Text>
           <Text
             className="text-gray-400 text-sm"
             numberOfLines={1}
             ellipsizeMode="tail"
           >
-            {currentSong.artist}
+            {currentSong.artist || "Artista desconocido"}
           </Text>
         </TouchableOpacity>
 
-        {/* Controles */}
         <View className="flex-row items-center">
-          {/* Play / Pause */}
           <TouchableOpacity
             onPress={togglePlayPause}
             className="mr-5"
@@ -73,7 +74,6 @@ export default function MiniReproductor() {
             />
           </TouchableOpacity>
 
-          {/* Siguiente */}
           <TouchableOpacity onPress={next} accessibilityLabel="Siguiente">
             <Image
               source={require("../../assets/siguiente.png")}
