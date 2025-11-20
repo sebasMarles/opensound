@@ -36,6 +36,7 @@ async function adminRequest<T>(path: string, token: string, options: RequestInit
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        "x-access-token": token,
         ...options.headers,
       },
     })

@@ -9,13 +9,14 @@ const API_BASE_URL = getApiBaseUrl()
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 
+// Agregamos el token a los headers si existe
 async function withAuthHeaders(headers: HeadersInit = {}): Promise<HeadersInit> {
   try {
     const raw = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
     const token = extractTokenFromStorageValue(raw)
     return {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}`, "x-access-token": token } : {}),
       ...headers,
     }
   } catch {
@@ -23,6 +24,7 @@ async function withAuthHeaders(headers: HeadersInit = {}): Promise<HeadersInit> 
   }
 }
 
+// Funcion base para hacer peticiones al backend
 async function request<T>(method: HttpMethod, path: string, body?: Json): Promise<T> {
   const url = path.startsWith("http") ? path : buildUrl(API_BASE_URL, path)
   const headers = await withAuthHeaders()

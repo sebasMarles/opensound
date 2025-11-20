@@ -2,13 +2,16 @@ import { getApiBaseUrl } from "../hooks/useApiBaseUrl"
 import type { Playlist, CreatePlaylistDto, UpdatePlaylistDto, AddSongDto } from "../types/playlist"
 import { extractJamendoId } from "../utils/jamendo"
 
+// Helper para poner los headers de auth
 async function getAuthHeaders(token: string) {
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
+    "x-access-token": token,
   }
 }
 
+// Traer todas las playlists
 export async function getAllPlaylists(token: string): Promise<Playlist[]> {
   const baseUrl = await getApiBaseUrl()
 
@@ -28,6 +31,7 @@ export async function getAllPlaylists(token: string): Promise<Playlist[]> {
   return Array.isArray(playlists) ? playlists : []
 }
 
+// Traer una playlist por ID
 export async function getPlaylistById(token: string, playlistId: string): Promise<Playlist> {
   const baseUrl = await getApiBaseUrl()
   const response = await fetch(`${baseUrl}/playlists/${playlistId}`, {
@@ -42,6 +46,7 @@ export async function getPlaylistById(token: string, playlistId: string): Promis
   return data.playlist || data
 }
 
+// Crear playlist nueva
 export async function createPlaylist(token: string, data: CreatePlaylistDto): Promise<Playlist> {
   const baseUrl = await getApiBaseUrl()
 
@@ -65,6 +70,7 @@ export async function createPlaylist(token: string, data: CreatePlaylistDto): Pr
   }
 }
 
+// Actualizar playlist
 export async function updatePlaylist(token: string, playlistId: string, data: UpdatePlaylistDto): Promise<Playlist> {
   const baseUrl = await getApiBaseUrl()
   const response = await fetch(`${baseUrl}/playlists/${playlistId}`, {
@@ -81,6 +87,7 @@ export async function updatePlaylist(token: string, playlistId: string, data: Up
   return result.playlist || result
 }
 
+// Borrar playlist
 export async function deletePlaylist(token: string, playlistId: string): Promise<void> {
   const baseUrl = await getApiBaseUrl()
   const response = await fetch(`${baseUrl}/playlists/${playlistId}`, {
@@ -94,6 +101,7 @@ export async function deletePlaylist(token: string, playlistId: string): Promise
   }
 }
 
+// Agregar cancion a playlist
 export async function addSongToPlaylist(token: string, playlistId: string, song: AddSongDto): Promise<Playlist> {
   const baseUrl = await getApiBaseUrl()
 
@@ -122,6 +130,7 @@ export async function addSongToPlaylist(token: string, playlistId: string, song:
   return result.playlist || result
 }
 
+// Quitar cancion de playlist
 export async function removeSongFromPlaylist(token: string, playlistId: string, jamendoId: string): Promise<Playlist> {
   const baseUrl = await getApiBaseUrl()
 
@@ -138,6 +147,7 @@ export async function removeSongFromPlaylist(token: string, playlistId: string, 
   return result.playlist || result
 }
 
+// Ver canciones favoritas
 export async function getLikedSongs(token: string): Promise<AddSongDto[]> {
   const baseUrl = await getApiBaseUrl()
   const response = await fetch(`${baseUrl}/playlists/liked/songs`, {
@@ -156,6 +166,7 @@ export async function getLikedSongs(token: string): Promise<AddSongDto[]> {
   return Array.isArray(songs) ? songs : []
 }
 
+// Dar like/dislike
 export async function toggleLikedSong(
   token: string,
   song: AddSongDto,

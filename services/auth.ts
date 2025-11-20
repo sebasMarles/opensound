@@ -37,6 +37,7 @@ export class AuthError extends Error {
   }
 }
 
+// Nos aseguramos de que el usuario tenga nombre y ID
 export function ensureAuthUser(
   incomingUser: AuthUser | undefined,
   fallbackEmail: string,
@@ -53,6 +54,7 @@ export function ensureAuthUser(
   }
 }
 
+// Funcion generica para hacer peticiones de auth
 async function postAuth(path: string, body: unknown): Promise<AuthResponse> {
   const url = buildUrl(API_BASE_URL, path)
 
@@ -120,6 +122,7 @@ async function postAuth(path: string, body: unknown): Promise<AuthResponse> {
   }
 }
 
+// Iniciar sesion
 export async function login(credentials: LoginPayload): Promise<LoginResponse> {
   const payload = await postAuth("/auth/login", credentials)
 
@@ -131,6 +134,7 @@ export async function login(credentials: LoginPayload): Promise<LoginResponse> {
   return { token: payload.token, user }
 }
 
+// Verificar si el email existe
 export async function checkEmailExists(email: string): Promise<boolean> {
   const url = buildUrl(API_BASE_URL, "/auth/check-email")
 
@@ -144,10 +148,12 @@ export async function checkEmailExists(email: string): Promise<boolean> {
     const data = await response.json()
     return data.exists === true
   } catch (error) {
-    return false
+    console.error("Error checking email:", error)
+    throw new AuthError("No se pudo verificar el correo. Revisa tu conexión.", "NETWORK_ERROR")
   }
 }
 
+// Registrar usuario
 export async function register(payload: RegisterPayload): Promise<LoginResponse> {
   const response = await postAuth("/auth/register", payload)
 

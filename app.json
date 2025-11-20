@@ -33,10 +33,10 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#A855F7",
-          "sounds": ["./assets/notification.wav"]
+          "color": "#A855F7"
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "router": {},
