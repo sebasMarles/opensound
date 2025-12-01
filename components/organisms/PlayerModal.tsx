@@ -11,6 +11,7 @@ import {
   Dimensions,
   StyleSheet,
 } from "react-native";
+import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Haptics from "expo-haptics";
 import { useMusicPlayer } from "../../context/MusicPlayerContext";
@@ -27,6 +28,7 @@ function formatTime(ms: number) {
 }
 
 export default function PlayerModal() {
+  const router = useRouter();
   const {
     isPlayerVisible,
     setPlayerVisible,
@@ -209,13 +211,28 @@ export default function PlayerModal() {
         >
           {currentSong.title}
         </Text>
-        <Text
-          className="text-gray-400 text-base mt-1"
-          numberOfLines={1}
-          ellipsizeMode="tail"
+        <TouchableOpacity
+          onPress={() => {
+            setPlayerVisible(false);
+            setTimeout(() => {
+              router.push({
+                pathname: "/(tabs)/artist-detail",
+                params: {
+                  id: "search",
+                  name: currentSong.artist || "Artista desconocido",
+                },
+              });
+            }, 300);
+          }}
         >
-          {currentSong.artist}
-        </Text>
+          <Text
+            className="text-gray-400 text-base mt-1"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {currentSong.artist}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Barra de progreso + tiempos (ancho completo con padding lateral) */}

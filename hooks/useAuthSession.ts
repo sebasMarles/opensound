@@ -38,13 +38,14 @@ export function useAuthSession() {
   useAuthSync({ user, token, restoring, persistSession });
 
   // Acciones
-  const { signIn, signOut } = useAuthActions({
+  const { signIn, signOut, updateUser } = useAuthActions({
     setLoading,
     setSession,
     clearSession,
     persistSession,
     clearSessionStorage,
     setLoginError,
+    token,
   });
 
   return useMemo(
@@ -56,6 +57,7 @@ export function useAuthSession() {
       clearLoginError: () => setLoginError(null),
       signIn,
       signOut,
+      updateUser,
     }),
     [
       loading,
@@ -63,6 +65,7 @@ export function useAuthSession() {
       loginError,
       signIn,
       signOut,
+      updateUser,
       token,
       user,
       setLoginError,

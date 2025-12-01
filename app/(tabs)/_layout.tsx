@@ -51,6 +51,12 @@ export default function TabsLayout() {
             href: null, // Oculta del tab bar pero mantiene las tabs visibles
           }}
         />
+        <Tabs.Screen
+          name="artist-detail"
+          options={{
+            href: null, // Oculta del tab bar pero mantiene las tabs visibles
+          }}
+        />
       </Tabs>
 
       {currentSong && (

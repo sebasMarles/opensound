@@ -1,9 +1,11 @@
+
 export type AuthUser = {
   id: string;
   email: string;
   name?: string;
   avatarUrl?: string;
   role?: "admin" | "user" | "editor" | string;
+  description?: string;
 };
 
 export type AuthTokens = {

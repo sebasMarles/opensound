@@ -1,27 +1,17 @@
-"use client";
-
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { useState, useEffect } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useToast } from "../../context/ToastContext";
 import { usePlaylists } from "../../hooks/usePlaylists";
 import { useLikedSongs } from "../../hooks/useLikedSongs";
-import type { AddSongDto } from "../../types/playlist";
+import { useState, useEffect } from "react";
 
-interface AddToPlaylistModalProps {
+type AddToPlaylistModalProps = {
   visible: boolean;
   onClose: () => void;
-  song: AddSongDto | null;
+  song: any;
   onCreateNew: () => void;
-}
+};
 
 export default function AddToPlaylistModal({
   visible,
@@ -29,10 +19,12 @@ export default function AddToPlaylistModal({
   song,
   onCreateNew,
 }: AddToPlaylistModalProps) {
+  const { showToast } = useToast();
   const { playlists, addSongToPlaylist, refetch } = usePlaylists();
   const { refetch: refetchLikedSongs } = useLikedSongs();
   const [adding, setAdding] = useState<string | null>(null);
 
+  // Refetch playlists when modal becomes visible
   useEffect(() => {
     if (visible) {
       refetch();
@@ -45,11 +37,11 @@ export default function AddToPlaylistModal({
     const playlist = playlists.find((p) => p._id === playlistId);
     if (playlist) {
       const songExists = playlist.songs.some(
-        (s) => s.jamendoId === song.jamendoId
+        (s) => s.jamendoId === (song.jamendoId || song.id)
       );
       if (songExists) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        Alert.alert("Información", "Esta canción ya está en la playlist");
+        showToast("Esta canción ya está en la playlist", "info");
         return;
       }
     }
@@ -63,15 +55,15 @@ export default function AddToPlaylistModal({
         await refetchLikedSongs();
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        "Éxito",
-        `Canción agregada a "${playlist?.name || "la playlist"}"`
+      showToast(
+        `Canción agregada a "${playlist?.name || "la playlist"}"`,
+        "success"
       );
       onClose();
     } catch (error) {
       console.error("Error al agregar canción:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Error", "No se pudo agregar la canción a la playlist");
+      showToast("No se pudo agregar la canción a la playlist", "error");
     } finally {
       setAdding(null);
     }

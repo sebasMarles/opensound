@@ -10,9 +10,9 @@ export type LoginPayload = {
 }
 
 export type RegisterPayload = {
-  name: string
-  email: string
-  password: string
+  email: string;
+  name: string;
+  password: string;
 }
 
 export type LoginResponse = {
@@ -163,4 +163,31 @@ export async function register(payload: RegisterPayload): Promise<LoginResponse>
 
   const user = ensureAuthUser(response.user, payload.email, payload.name)
   return { token: response.token, user }
+}
+
+// Actualizar perfil
+export async function updateProfile(data: { name?: string; description?: string }, token: string): Promise<AuthUser> {
+  const url = buildUrl(API_BASE_URL, "/auth/profile")
+
+  try {
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new AuthError(errorData.message || "Error al actualizar perfil", "UPDATE_ERROR")
+    }
+
+    const json = await response.json()
+    return json.user
+  } catch (error) {
+    if (error instanceof AuthError) throw error
+    throw new AuthError("Error al actualizar perfil", "UPDATE_ERROR")
+  }
 }

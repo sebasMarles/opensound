@@ -8,6 +8,7 @@ import * as Network from "expo-network";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { MusicPlayerProvider } from "../context/MusicPlayerContext";
 import { usePushNotifications } from "../hooks/usePushNotifications";
+import { ToastProvider } from "../context/ToastContext";
 import PlayerModal from "../components/PlayerModal";
 
 // Subcomponente que controla las redirecciones seguras
@@ -93,7 +94,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <MusicPlayerProvider>
-          <AuthGate />
+          <ToastProvider>
+            <AuthGate />
+          </ToastProvider>
         </MusicPlayerProvider>
       </AuthProvider>
     </SafeAreaProvider>

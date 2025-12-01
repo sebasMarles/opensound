@@ -1,36 +1,29 @@
-"use client";
-
-import {
-  View,
-  Text,
-  Image,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
-import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState, useEffect, useCallback } from "react";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useToast } from "../../context/ToastContext";
 import { usePlaylists } from "../../hooks/usePlaylists";
-import { useMusicPlayer } from "../../context/MusicPlayerContext";
-import type { Playlist } from "../../types/playlist";
-import { extractJamendoId } from "../../utils/jamendo";
 import { useLikedSongs } from "../../hooks/useLikedSongs";
+import { useMusicPlayer } from "../../context/MusicPlayerContext";
 import MiniReproductor from "../../components/MiniReproductor";
+import { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function PlaylistDetail() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { playlists, removeSongFromPlaylist, deletePlaylist, refetch } =
-    usePlaylists();
-  const { playPlaylist, currentSong } = useMusicPlayer();
+  const { id } = useLocalSearchParams();
+  const { showToast } = useToast();
+  const { playlists, removeSongFromPlaylist, deletePlaylist, refetch } = usePlaylists();
   const { refetch: refetchLikedSongs } = useLikedSongs();
-  const [playlist, setPlaylist] = useState<Playlist | null>(null);
+  const { playFromJamendoTrack, currentSong } = useMusicPlayer();
+  
   const [removing, setRemoving] = useState<string | null>(null);
 
+  const playlist = playlists.find((p) => p._id === id);
+
+  // Refetch playlist data when screen gains focus
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -38,29 +31,33 @@ export default function PlaylistDetail() {
     }, [refetch, refetchLikedSongs])
   );
 
-  useEffect(() => {
-    const found = playlists.find((p) => p._id === id);
-    if (found) setPlaylist(found);
-  }, [id, playlists]);
+  const handlePlaySong = async (song: any, index: number) => {
+    try {
+      await playFromJamendoTrack(song);
+    } catch (error) {
+      console.error("Error al reproducir:", error);
+      showToast("No se pudo reproducir la canción", "error");
+    }
+  };
+
+  const handleDeletePlaylist = async () => {
+    if (!playlist) return;
+    try {
+      await deletePlaylist(playlist._id);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast("Playlist eliminada correctamente", "success");
+      router.back();
+    } catch (error) {
+      console.error("Error al eliminar playlist:", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showToast("No se pudo eliminar la playlist", "error");
+    }
+  };
 
   const handleRemoveSong = async (song: any) => {
     if (!playlist) return;
-
-    const jamendoId = extractJamendoId(song);
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    Alert.alert(
-      "Eliminar canción",
-      "¿Estás seguro de que quieres eliminar esta canción de la playlist?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: async () => {
-            setRemoving(jamendoId);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    const jamendoId = song.jamendoId;
+    setRemoving(jamendoId);
             try {
               await removeSongFromPlaylist(playlist._id, jamendoId);
               await refetch();
@@ -68,70 +65,17 @@ export default function PlaylistDetail() {
               Haptics.notificationAsync(
                 Haptics.NotificationFeedbackType.Success
               );
-              Alert.alert("Éxito", "Canción eliminada de la playlist");
+              showToast("Canción eliminada de la playlist", "success");
             } catch (error) {
               console.error("Error al eliminar canción:", error);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert("Error", "No se pudo eliminar la canción");
+              showToast("No se pudo eliminar la canción", "error");
             } finally {
               setRemoving(null);
             }
-          },
-        },
-      ]
-    );
   };
 
-  const handleDeletePlaylist = () => {
-    if (!playlist) return;
 
-    if (playlist.isLiked) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Error", "No puedes eliminar la playlist Me Gusta");
-      return;
-    }
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    Alert.alert(
-      "Eliminar playlist",
-      `¿Estás seguro de que quieres eliminar "${playlist.name}"?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: async () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            try {
-              await deletePlaylist(playlist._id);
-              Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Success
-              );
-              router.back();
-            } catch (error) {
-              console.error("Error al eliminar playlist:", error);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert("Error", "No se pudo eliminar la playlist");
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handlePlaySong = async (song: any, index: number) => {
-    if (!playlist) return;
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      await playPlaylist(playlist.songs, index);
-    } catch (error) {
-      console.error("Error al reproducir canción:", error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Error", "No se pudo reproducir la canción");
-    }
-  };
 
   if (!playlist) {
     return (

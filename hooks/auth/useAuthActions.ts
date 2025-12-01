@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { login, ensureAuthUser } from "../../services/auth";
+import { login, ensureAuthUser, updateProfile } from "../../services/auth";
 import type { AuthUser } from "../../types/auth";
 
 export type SignInPayload = {
@@ -16,6 +16,7 @@ type UseAuthActionsParams = {
   persistSession: (user: AuthUser, token: string) => Promise<void>;
   clearSessionStorage: () => Promise<void>;
   setLoginError: (error: string | null) => void;
+  token: string | null;
 };
 
 /**
@@ -29,6 +30,7 @@ export function useAuthActions({
   persistSession,
   clearSessionStorage,
   setLoginError,
+  token,
 }: UseAuthActionsParams) {
   const handleSignIn = useCallback(
     async ({ email, password }: SignInPayload) => {
@@ -69,8 +71,28 @@ export function useAuthActions({
     }
   }, [clearSession, clearSessionStorage, setLoading]);
 
+  const handleUpdateUser = useCallback(
+    async (data: { name?: string; description?: string }) => {
+      if (!token) throw new Error("No hay sesión activa");
+      
+      try {
+        const updatedUser = await updateProfile(data, token);
+        // Actualizamos la sesión con los nuevos datos del usuario
+        // Mantenemos el token actual
+        setSession({ user: updatedUser, tokens: { token } });
+        // También persistimos los cambios
+        await persistSession(updatedUser, token);
+        return updatedUser;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [token, setSession, persistSession]
+  );
+
   return {
     signIn: handleSignIn,
     signOut: handleSignOut,
+    updateUser: handleUpdateUser,
   };
 }

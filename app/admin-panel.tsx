@@ -9,14 +9,15 @@ import { useAuth } from "../context/AuthContext"
 import { useAdminUsers } from "../hooks/useAdminUsers"
 import { useAdminStats } from "../hooks/useAdminStats"
 import { useAdminActions } from "../hooks/useAdminActions"
-import { AuthAlert } from "../components/AuthAlert"
+import { useToast } from "../context/ToastContext"
+import { KeyboardDismissWrapper } from "../components/ui/KeyboardDismissWrapper"
 import type { AdminUser } from "../services/admin"
 
 export default function AdminPanel() {
   const router = useRouter()
   const { user, token } = useAuth()
+  const { showToast } = useToast()
   const [search, setSearch] = useState("")
-  const [alert, setAlert] = useState<{ type: "error" | "success"; message: string } | null>(null)
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
   const [editForm, setEditForm] = useState({ name: "", email: "", role: "user" as "user" | "admin" })
 
@@ -31,7 +32,7 @@ export default function AdminPanel() {
   } = useAdminActions(token, () => {
     reloadUsers()
     setEditingUser(null)
-    setAlert({ type: "success", message: "Operación completada exitosamente" })
+    showToast("Operación completada exitosamente", "success")
   })
 
   const handleSearchChange = (text: string) => {
@@ -52,13 +53,13 @@ export default function AdminPanel() {
     if (!editingUser) return
     const success = await handleUpdate(editingUser.id, editForm)
     if (success) {
-      setAlert({ type: "success", message: "Usuario actualizado correctamente" })
+      showToast("Usuario actualizado correctamente", "success")
     }
   }
 
   const confirmDelete = (userId: string, userName: string) => {
     if (userId === user?.id) {
-      setAlert({ type: "error", message: "No puedes eliminarte a ti mismo" })
+      showToast("No puedes eliminarte a ti mismo", "error")
       return
     }
 
@@ -70,7 +71,7 @@ export default function AdminPanel() {
         onPress: async () => {
           const success = await handleDelete(userId)
           if (success) {
-            setAlert({ type: "success", message: "Usuario eliminado correctamente" })
+            showToast("Usuario eliminado correctamente", "success")
           }
         },
       },
@@ -93,180 +94,171 @@ export default function AdminPanel() {
 
   return (
     <SafeAreaView className="flex-1 bg-black">
-      <View className="px-6 pt-6 pb-4">
-        <View className="flex-row items-center justify-between mb-6">
-          <TouchableOpacity onPress={() => router.back()} className="p-2">
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <Text className="text-white text-lg font-semibold">Panel de Administración</Text>
-          <View style={{ width: 36 }} />
-        </View>
-
-        <Text className="text-gray-400 mb-4">Gestiona los usuarios de la aplicación</Text>
-
-        {stats && (
-          <View className="flex-row justify-between mb-4">
-            <View className="bg-neutral-900 rounded-lg p-4 flex-1 mr-2">
-              <Text className="text-gray-400 text-sm">Total Usuarios</Text>
-              <Text className="text-white text-2xl font-bold">{stats.totalUsers}</Text>
+      <KeyboardDismissWrapper>
+        <View className="flex-1">
+          <View className="px-6 pt-6 pb-4">
+            <View className="flex-row items-center justify-between mb-6">
+              <TouchableOpacity onPress={() => router.back()} className="p-2">
+                <Ionicons name="arrow-back" size={24} color="white" />
+              </TouchableOpacity>
+              <Text className="text-white text-lg font-semibold">Panel de Administración</Text>
+              <View style={{ width: 36 }} />
             </View>
-            <View className="bg-neutral-900 rounded-lg p-4 flex-1 ml-2">
-              <Text className="text-gray-400 text-sm">Administradores</Text>
-              <Text className="text-purple-500 text-2xl font-bold">{stats.totalAdmins}</Text>
-            </View>
-          </View>
-        )}
 
-        {(alert || actionError || usersError) && (
-          <View className="mb-4">
-            <AuthAlert
-              type={alert?.type || "error"}
-              message={alert?.message || actionError || usersError || ""}
-              onDismiss={() => {
-                setAlert(null)
-                clearError()
-              }}
-            />
-          </View>
-        )}
+            <Text className="text-gray-400 mb-4">Gestiona los usuarios de la aplicación</Text>
 
-        <View className="flex-row items-center bg-neutral-900 rounded-lg px-4 py-2 mb-4">
-          <Ionicons name="search" size={20} color="#888" />
-          <TextInput
-            className="flex-1 text-white ml-2"
-            placeholder="Buscar por nombre o email..."
-            placeholderTextColor="#888"
-            value={search}
-            onChangeText={handleSearchChange}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity
-              onPress={() => {
-                setSearch("")
-                filterUsers("")
-              }}
-            >
-              <Ionicons name="close-circle" size={20} color="#888" />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {loading ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#D400FF" />
-        </View>
-      ) : (
-        <FlatList
-          data={users}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
-          renderItem={({ item }) => (
-            <View className="bg-neutral-900 rounded-lg p-4 mb-3">
-              <View className="flex-row justify-between items-start mb-2">
-                <View className="flex-1">
-                  <Text className="text-white font-bold text-lg">{item.name}</Text>
-                  <Text className="text-gray-400">{item.email}</Text>
+            {stats && (
+              <View className="flex-row justify-between mb-4">
+                <View className="bg-neutral-900 rounded-lg p-4 flex-1 mr-2">
+                  <Text className="text-gray-400 text-sm">Total Usuarios</Text>
+                  <Text className="text-white text-2xl font-bold">{stats.totalUsers}</Text>
                 </View>
-                <View className={`px-3 py-1 rounded-full ${item.role === "admin" ? "bg-purple-600" : "bg-gray-600"}`}>
-                  <Text className="text-white text-xs font-bold">{item.role === "admin" ? "ADMIN" : "USER"}</Text>
+                <View className="bg-neutral-900 rounded-lg p-4 flex-1 ml-2">
+                  <Text className="text-gray-400 text-sm">Administradores</Text>
+                  <Text className="text-purple-500 text-2xl font-bold">{stats.totalAdmins}</Text>
                 </View>
               </View>
+            )}
 
-              <Text className="text-gray-500 text-xs mb-3">
-                Registrado: {new Date(item.createdAt).toLocaleDateString()}
-              </Text>
-
-              <View className="flex-row justify-end">
+            <View className="flex-row items-center bg-neutral-900 rounded-lg px-4 py-2 mb-4">
+              <Ionicons name="search" size={20} color="#888" />
+              <TextInput
+                className="flex-1 text-white ml-2"
+                placeholder="Buscar por nombre o email..."
+                placeholderTextColor="#888"
+                value={search}
+                onChangeText={handleSearchChange}
+              />
+              {search.length > 0 && (
                 <TouchableOpacity
-                  className="bg-blue-600 px-4 py-2 rounded-lg mr-2 flex-row items-center"
-                  onPress={() => openEditModal(item)}
-                  disabled={actionLoading}
+                  onPress={() => {
+                    setSearch("")
+                    filterUsers("")
+                  }}
                 >
-                  <Ionicons name="pencil" size={16} color="white" />
-                  <Text className="text-white ml-2 font-bold">Editar</Text>
+                  <Ionicons name="close-circle" size={20} color="#888" />
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                  className="bg-red-600 px-4 py-2 rounded-lg flex-row items-center"
-                  onPress={() => confirmDelete(item.id, item.name)}
-                  disabled={item.id === user?.id || actionLoading}
-                >
-                  <Ionicons name="trash" size={16} color="white" />
-                  <Text className="text-white ml-2 font-bold">Eliminar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          ListEmptyComponent={
-            <View className="items-center py-8">
-              <Ionicons name="people-outline" size={64} color="#888" />
-              <Text className="text-gray-400 mt-4">No se encontraron usuarios</Text>
-            </View>
-          }
-        />
-      )}
-
-      <Modal visible={!!editingUser} animationType="slide" transparent>
-        <View className="flex-1 justify-center items-center bg-black/80">
-          <View className="bg-neutral-900 rounded-lg p-6 w-11/12 max-w-md">
-            <Text className="text-white text-2xl font-bold mb-4">Editar Usuario</Text>
-
-            <Text className="text-gray-400 mb-2">Nombre</Text>
-            <TextInput
-              className="bg-black text-white px-4 py-3 rounded-lg mb-4"
-              value={editForm.name}
-              onChangeText={(text) => setEditForm({ ...editForm, name: text })}
-              placeholder="Nombre del usuario"
-              placeholderTextColor="#888"
-            />
-
-            <Text className="text-gray-400 mb-2">Email</Text>
-            <TextInput
-              className="bg-black text-white px-4 py-3 rounded-lg mb-4"
-              value={editForm.email}
-              onChangeText={(text) => setEditForm({ ...editForm, email: text })}
-              placeholder="correo@ejemplo.com"
-              placeholderTextColor="#888"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-
-            <Text className="text-gray-400 mb-2">Rol</Text>
-            <View className="flex-row mb-6">
-              <TouchableOpacity
-                className={`flex-1 py-3 rounded-lg mr-2 ${editForm.role === "user" ? "bg-purple-600" : "bg-black"}`}
-                onPress={() => setEditForm({ ...editForm, role: "user" })}
-              >
-                <Text className="text-white text-center font-bold">Usuario</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className={`flex-1 py-3 rounded-lg ml-2 ${editForm.role === "admin" ? "bg-purple-600" : "bg-black"}`}
-                onPress={() => setEditForm({ ...editForm, role: "admin" })}
-              >
-                <Text className="text-white text-center font-bold">Admin</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View className="flex-row">
-              <TouchableOpacity
-                className="flex-1 bg-gray-600 py-3 rounded-lg mr-2"
-                onPress={() => setEditingUser(null)}
-                disabled={actionLoading}
-              >
-                <Text className="text-white text-center font-bold">Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 bg-purple-600 py-3 rounded-lg ml-2"
-                onPress={confirmUpdate}
-                disabled={actionLoading}
-              >
-                <Text className="text-white text-center font-bold">{actionLoading ? "Guardando..." : "Guardar"}</Text>
-              </TouchableOpacity>
+              )}
             </View>
           </View>
+
+          {loading ? (
+            <View className="flex-1 justify-center items-center">
+              <ActivityIndicator size="large" color="#D400FF" />
+            </View>
+          ) : (
+            <FlatList
+              data={users}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
+              renderItem={({ item }) => (
+                <View className="bg-neutral-900 rounded-lg p-4 mb-3">
+                  <View className="flex-row justify-between items-start mb-2">
+                    <View className="flex-1">
+                      <Text className="text-white font-bold text-lg">{item.name}</Text>
+                      <Text className="text-gray-400">{item.email}</Text>
+                    </View>
+                    <View className={`px-3 py-1 rounded-full ${item.role === "admin" ? "bg-purple-600" : "bg-gray-600"}`}>
+                      <Text className="text-white text-xs font-bold">{item.role === "admin" ? "ADMIN" : "USER"}</Text>
+                    </View>
+                  </View>
+
+                  <Text className="text-gray-500 text-xs mb-3">
+                    Registrado: {new Date(item.createdAt).toLocaleDateString()}
+                  </Text>
+
+                  <View className="flex-row justify-end">
+                    <TouchableOpacity
+                      className="bg-blue-600 px-4 py-2 rounded-lg mr-2 flex-row items-center"
+                      onPress={() => openEditModal(item)}
+                      disabled={actionLoading}
+                    >
+                      <Ionicons name="pencil" size={16} color="white" />
+                      <Text className="text-white ml-2 font-bold">Editar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      className="bg-red-600 px-4 py-2 rounded-lg flex-row items-center"
+                      onPress={() => confirmDelete(item.id, item.name)}
+                      disabled={item.id === user?.id || actionLoading}
+                    >
+                      <Ionicons name="trash" size={16} color="white" />
+                      <Text className="text-white ml-2 font-bold">Eliminar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+              ListEmptyComponent={
+                <View className="items-center py-8">
+                  <Ionicons name="people-outline" size={64} color="#888" />
+                  <Text className="text-gray-400 mt-4">No se encontraron usuarios</Text>
+                </View>
+              }
+            />
+          )}
+
+          <Modal visible={!!editingUser} animationType="slide" transparent>
+            <KeyboardDismissWrapper style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.8)" }}>
+              <View className="bg-neutral-900 rounded-lg p-6 w-11/12 max-w-md">
+                <Text className="text-white text-2xl font-bold mb-4">Editar Usuario</Text>
+
+                <Text className="text-gray-400 mb-2">Nombre</Text>
+                <TextInput
+                  className="bg-black text-white px-4 py-3 rounded-lg mb-4"
+                  value={editForm.name}
+                  onChangeText={(text) => setEditForm({ ...editForm, name: text })}
+                  placeholder="Nombre del usuario"
+                  placeholderTextColor="#888"
+                />
+
+                <Text className="text-gray-400 mb-2">Email</Text>
+                <TextInput
+                  className="bg-black text-white px-4 py-3 rounded-lg mb-4"
+                  value={editForm.email}
+                  onChangeText={(text) => setEditForm({ ...editForm, email: text })}
+                  placeholder="correo@ejemplo.com"
+                  placeholderTextColor="#888"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+
+                <Text className="text-gray-400 mb-2">Rol</Text>
+                <View className="flex-row mb-6">
+                  <TouchableOpacity
+                    className={`flex-1 py-3 rounded-lg mr-2 ${editForm.role === "user" ? "bg-purple-600" : "bg-black"}`}
+                    onPress={() => setEditForm({ ...editForm, role: "user" })}
+                  >
+                    <Text className="text-white text-center font-bold">Usuario</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className={`flex-1 py-3 rounded-lg ml-2 ${editForm.role === "admin" ? "bg-purple-600" : "bg-black"}`}
+                    onPress={() => setEditForm({ ...editForm, role: "admin" })}
+                  >
+                    <Text className="text-white text-center font-bold">Admin</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View className="flex-row">
+                  <TouchableOpacity
+                    className="flex-1 bg-gray-600 py-3 rounded-lg mr-2"
+                    onPress={() => setEditingUser(null)}
+                    disabled={actionLoading}
+                  >
+                    <Text className="text-white text-center font-bold">Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="flex-1 bg-purple-600 py-3 rounded-lg ml-2"
+                    onPress={confirmUpdate}
+                    disabled={actionLoading}
+                  >
+                    <Text className="text-white text-center font-bold">{actionLoading ? "Guardando..." : "Guardar"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardDismissWrapper>
+          </Modal>
         </View>
-      </Modal>
+      </KeyboardDismissWrapper>
     </SafeAreaView>
   )
 }

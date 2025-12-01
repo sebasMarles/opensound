@@ -1,27 +1,17 @@
-"use client";
-
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  Image,
-  Alert,
-} from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { View, Text, Image, TouchableOpacity, Modal } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import type { Track } from "../../services/jamendo";
+import { useToast } from "../../context/ToastContext";
 import { useLikedSongs } from "../../hooks/useLikedSongs";
-import { extractJamendoId } from "../../utils/jamendo";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
-interface SongOptionsModalProps {
+type SongOptionsModalProps = {
   visible: boolean;
   onClose: () => void;
-  song: Track | null;
+  song: any;
   onAddToPlaylist: () => void;
   onGoToArtist: () => void;
-}
+};
 
 export default function SongOptionsModal({
   visible,
@@ -30,53 +20,43 @@ export default function SongOptionsModal({
   onAddToPlaylist,
   onGoToArtist,
 }: SongOptionsModalProps) {
-  const { isLiked, toggleLike, refetch } = useLikedSongs();
-  const [isTogglingLike, setIsTogglingLike] = useState(false);
+  const { showToast } = useToast();
+  const { toggleLike, isLiked } = useLikedSongs();
   const [currentLikedState, setCurrentLikedState] = useState(false);
+  const [isTogglingLike, setIsTogglingLike] = useState(false);
 
   useEffect(() => {
-    if (song && visible) {
-      // Primero refetch para obtener el estado más actualizado
-      refetch().then(() => {
-        const jamendoId = extractJamendoId(song);
-        const likedState = isLiked(jamendoId);
-        setCurrentLikedState(likedState);
-      });
+    if (song) {
+      setCurrentLikedState(isLiked(song.jamendoId || song.id));
     }
-  }, [song, visible, refetch, isLiked]);
+  }, [song, isLiked]);
 
   const handleToggleLike = async () => {
-    if (!song || isTogglingLike) return;
-
+    if (!song) return;
     setIsTogglingLike(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    const songDto = {
+      jamendoId: song.jamendoId || song.id,
+      name: song.name,
+      artist_name: song.artist_name,
+      image: song.image || song.album_image,
+      audio: song.audio,
+    };
 
     try {
-      const jamendoId = extractJamendoId(song);
-      const songDto = {
-        jamendoId,
-        name: song.name || "Sin título",
-        artist_name: song.artist_name || "Artista desconocido",
-        image: song.image,
-        album_image: song.album_image,
-        audio: song.audio,
-      };
-
       const newLikedState = await toggleLike(songDto);
       setCurrentLikedState(newLikedState);
 
-      Alert.alert(
-        "Éxito",
+      showToast(
         newLikedState
           ? "Canción agregada a Me Gusta"
-          : "Canción eliminada de Me Gusta"
+          : "Canción eliminada de Me Gusta",
+        "success"
       );
-
-      await refetch();
     } catch (error) {
       console.error("Error al cambiar estado de Me Gusta:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Error", "No se pudo actualizar Me Gusta");
+      showToast("No se pudo actualizar Me Gusta", "error");
     } finally {
       setIsTogglingLike(false);
     }
@@ -151,8 +131,11 @@ export default function SongOptionsModal({
             <TouchableOpacity
               className="flex-row items-center py-4"
               onPress={() => {
-                onGoToArtist();
                 onClose();
+                // Pequeño delay para que cierre el modal antes de navegar
+                setTimeout(() => {
+                  onGoToArtist();
+                }, 300);
               }}
             >
               <Ionicons name="person-outline" size={24} color="white" />
